@@ -1,0 +1,147 @@
+<header class="page-header">
+  <div>
+    <h1>Closed Loans</h1>
+    <p class="page-sub">Fully settled — kept for your records.</p>
+  </div>
+  <button pButton type="button" [label]="showAddForm() ? 'Cancel' : '+ Add closed loan'" (click)="toggleAddForm()"></button>
+</header>
+
+@if (showAddForm()) {
+  <p-card styleClass="add-form">
+    <h3>Add a closed loan</h3>
+    <div class="form-grid">
+      <div class="field">
+        <label>Name</label>
+        <input pInputText type="text" [(ngModel)]="newClosed().name" />
+      </div>
+      <div class="field">
+        <label>Category</label>
+        <p-select [options]="categoryOptions" optionLabel="label" optionValue="value" [(ngModel)]="newClosed().category"></p-select>
+      </div>
+      <div class="field">
+        <label>Original amount (₹)</label>
+        <p-inputNumber [(ngModel)]="newClosed().originalAmount" [useGrouping]="false"></p-inputNumber>
+      </div>
+      <div class="field">
+        <label>Amount paid (₹)</label>
+        <p-inputNumber [(ngModel)]="newClosed().amountPaid" [useGrouping]="false"></p-inputNumber>
+      </div>
+      <div class="field">
+        <label>Date paid</label>
+        <input pInputText type="text" [(ngModel)]="newClosed().datePaid" placeholder="e.g. 2026-09-13" />
+      </div>
+    </div>
+    <button pButton type="button" label="Add" (click)="addClosed()"></button>
+  </p-card>
+}
+
+@if (!groups().length) {
+  <div class="empty-note">No closed loans yet.</div>
+}
+
+@for (group of groups(); track group.category) {
+  <p-card [styleClass]="'group-card cat-accent ' + catSlug(group.category)">
+    <button type="button" class="cat-toggle" (click)="toggleCategory(group.category)" [attr.aria-expanded]="isCategoryOpen(group.category)">
+      <h3>
+        <span class="cat-dot-ring"><span class="cat-dot" [class]="catSlug(group.category)"></span></span>
+        <span class="cat-name">{{ group.category }}</span>
+        <span class="cat-count">{{ group.loans.length }} {{ group.loans.length === 1 ? 'loan' : 'loans' }}</span>
+        <span class="cat-subtotal num">{{ fmtMoney(group.paidTotal) }}</span>
+        <i class="pi pi-chevron-down cat-chev" [class.open]="isCategoryOpen(group.category)"></i>
+      </h3>
+    </button>
+    @if (isCategoryOpen(group.category)) {
+    <div class="table-wrap">
+      <p-table [value]="group.loans" styleClass="p-datatable-sm">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Name</th>
+            <th class="num">Original</th>
+            <th class="num">Settled</th>
+            <th class="num">Paid</th>
+            <th class="num">Savings</th>
+            <th class="date-col">Date paid</th>
+            <th class="source-col">Source</th>
+            <th class="remarks-col">Remarks</th>
+            @if (catHasDocs(group.category)) { <th class="docs-col">Documents</th> }
+            <th class="actions-col"></th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-loan>
+          @if (editingId() === loan.id && editForm(); as form) {
+            <tr class="edit-row">
+              <td class="name"><input pInputText type="text" [(ngModel)]="form.name" /></td>
+              <td class="num"><p-inputNumber [(ngModel)]="form.originalAmount" [useGrouping]="false"></p-inputNumber></td>
+              <td class="num"><p-inputNumber [(ngModel)]="form.settledAmount" [useGrouping]="false"></p-inputNumber></td>
+              <td class="num"><p-inputNumber [(ngModel)]="form.amountPaid" [useGrouping]="false"></p-inputNumber></td>
+              <td class="num"></td>
+              <td><input pInputText type="text" [(ngModel)]="form.datePaid" /></td>
+              <td><input pInputText type="text" [(ngModel)]="form.source" /></td>
+              <td><input pInputText type="text" [(ngModel)]="form.remarks" /></td>
+              <td [attr.colspan]="catHasDocs(loan.category) ? 2 : 1" class="edit-actions">
+                <button pButton type="button" size="small" label="Save" (click)="saveEdit(loan.id)"></button>
+                <button pButton type="button" size="small" severity="secondary" [outlined]="true" label="Cancel" (click)="cancelEdit()"></button>
+              </td>
+            </tr>
+          } @else {
+            <tr>
+              <td class="name">{{ loan.name }}</td>
+              <td class="num money">{{ fmtMoney(loan.originalAmount) }}</td>
+              <td class="num money">{{ fmtMoney(loan.settledAmount) }}</td>
+              <td class="num money">{{ fmtMoney(loan.amountPaid) }}</td>
+              <td class="num money good">{{ fmtMoney(loan.originalAmount - loan.settledAmount) }}</td>
+              <td>{{ loan.datePaid || '—' }}</td>
+              <td class="source-cell">{{ loan.source || '—' }}</td>
+              <td class="remarks-cell">
+                @if (loan.remarks) {
+                  <div class="remarks-text" [class.expanded]="isRemarksExpanded(loan.id)">{{ loan.remarks }}</div>
+                  @if (remarksNeedsToggle(loan.remarks)) {
+                    <button pButton type="button" [text]="true" size="small" class="remarks-toggle" (click)="toggleRemarks(loan.id)">
+                      {{ isRemarksExpanded(loan.id) ? 'Show less' : 'Show more' }}
+                    </button>
+                  }
+                } @else {
+                  —
+                }
+              </td>
+              @if (catHasDocs(loan.category)) {
+                <td class="docs-cell">
+                  <button pButton type="button" [text]="true" [outlined]="true" size="small" severity="secondary" class="cell-toggle" (click)="toggleDocs(loan.id)" [attr.aria-expanded]="isDocsExpanded(loan.id)">
+                    <i class="pi pi-file"></i>
+                    <span>Documents</span>
+                    @if (hasAnyDoc(loan)) { <span class="toggle-dot" title="Document attached"></span> }
+                    <i class="pi pi-chevron-down chev" [class.open]="isDocsExpanded(loan.id)"></i>
+                  </button>
+                  @if (isDocsExpanded(loan.id)) {
+                    <div class="docs-expanded">
+                      <app-document-upload
+                        [loanId]="loan.id"
+                        [loanName]="loan.name"
+                        kind="settlementLetter"
+                        [existingDoc]="loan.settlementLetter"
+                        (uploaded)="onDocUploaded(loan.id, 'settlementLetter', $event)"
+                      ></app-document-upload>
+                      <app-document-upload
+                        [loanId]="loan.id"
+                        [loanName]="loan.name"
+                        kind="nocCopy"
+                        [existingDoc]="loan.nocCopy"
+                        (uploaded)="onDocUploaded(loan.id, 'nocCopy', $event)"
+                      ></app-document-upload>
+                    </div>
+                  }
+                </td>
+              }
+              <td class="row-actions">
+                <button pButton type="button" [text]="true" [rounded]="true" size="small" severity="secondary" icon="pi pi-ellipsis-v" (click)="openActionsMenu(loan, $event)" title="More actions" aria-label="More actions"></button>
+              </td>
+            </tr>
+          }
+        </ng-template>
+      </p-table>
+    </div>
+    }
+  </p-card>
+}
+
+<p-menu #actionsMenu [popup]="true" [model]="activeMenuItems()" appendTo="body"></p-menu>

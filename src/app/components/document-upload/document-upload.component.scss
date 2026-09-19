@@ -1,0 +1,85 @@
+.doc-upload {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+}
+
+/* .doc-link is now a <button>, not an <a> — clicking it opens the in-app
+   preview dialog instead of a new Google Drive tab, so it needs the usual
+   button resets (border/background/font/cursor) on top of the same visual
+   treatment the old link had. */
+.doc-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--accent);
+  text-decoration: none;
+  max-width: 170px;
+  border: none;
+  background: none;
+  padding: 0;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.doc-link:hover { text-decoration: underline; }
+.doc-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.btn.small { cursor: pointer; }
+.reupload { font-size: 11px; padding: 3px 8px; }
+
+.doc-error {
+  font-size: 11px;
+  color: var(--danger);
+  max-width: 180px;
+}
+
+.preview-body { min-height: 320px; display: flex; align-items: stretch; justify-content: center; }
+.preview-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--text-muted);
+  font-size: 13px;
+  width: 100%;
+  padding: 60px 20px;
+  text-align: center;
+}
+.preview-status i { font-size: 24px; }
+.preview-error { color: var(--danger); }
+.preview-frame {
+  width: 100%;
+  height: 70vh;
+  max-height: 640px;
+  border: none;
+}
+.preview-image {
+  max-width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+  margin: 0 auto;
+  display: block;
+}
+.drive-fallback-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  color: var(--accent);
+  text-decoration: none;
+  margin-right: auto;
+}
+.drive-fallback-link:hover { text-decoration: underline; }
+::ng-deep .p-dialog-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}

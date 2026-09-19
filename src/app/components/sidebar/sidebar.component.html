@@ -1,0 +1,52 @@
+<aside class="sidebar">
+  <div class="brand">
+    <div class="mark">K</div>
+    <div class="brand-text">
+      <div class="brand-title">CrediTrack</div>
+      <div class="brand-sub">&amp; Expense Calculator</div>
+    </div>
+  </div>
+
+  @if (data.syncError()) {
+    <p-message severity="error" styleClass="sync-banner">{{ data.syncError() }}</p-message>
+  }
+
+  <nav class="nav">
+    @for (item of navItems; track item.path) {
+      <a class="nav-btn" [routerLink]="item.path" routerLinkActive="active">
+        <span class="icon-chip nav-chip">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path [attr.d]="item.icon"></path>
+          </svg>
+        </span>
+        {{ item.label }}
+      </a>
+    }
+  </nav>
+
+  <div class="sidebar-foot">
+    <div class="drive-status">
+      @if (drive.isSignedIn()) {
+        <p-tag severity="success" value="Connected to Drive" icon="pi pi-check-circle"></p-tag>
+      } @else {
+        <button pButton type="button" size="small" [outlined]="true" [loading]="signingIn()" (click)="signIn()" icon="pi pi-google" label="Sign in with Google"></button>
+      }
+      @if (signInError()) {
+        <div class="foot-note error">{{ signInError() }}</div>
+      }
+    </div>
+
+    <button pButton type="button" size="small" class="export-btn" [loading]="exporting()" (click)="exportExcel()" icon="pi pi-file-excel" label="Export to Excel"></button>
+    @if (exportMessage()) {
+      <div class="foot-note">{{ exportMessage() }}</div>
+    }
+
+    <button type="button" class="signout-link" (click)="signOut()">Sign out / change passcode</button>
+  </div>
+</aside>
+
+<nav class="mobile-tabs">
+  @for (item of navItems; track item.path) {
+    <a [routerLink]="item.path" routerLinkActive="active">{{ item.label }}</a>
+  }
+</nav>

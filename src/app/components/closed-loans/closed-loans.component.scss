@@ -1,0 +1,154 @@
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.page-sub { color: var(--text-muted); margin-top: 4px; font-size: 13px; }
+
+.add-form { margin-bottom: 20px; }
+.add-form h3 { margin-bottom: 12px; }
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px 14px;
+}
+
+.group-card { margin-bottom: 18px; padding: 16px 16px 8px; }
+.group-card h3 { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; font-size: 14.5px; margin-bottom: 0; color: var(--text); }
+.group-card .table-wrap { margin-top: 10px; }
+
+/* Same column-alignment fix as Active Loans: table-layout: fixed with an
+   explicit width on every column except Name, set on the header row, so
+   every category's table lines up regardless of content or whether it also
+   has a Documents column. */
+/* Same fixed-width-vs-100%-container issue as Active Loans, worse here
+   since this table has two more fixed columns (Date paid, Source) — their
+   combined width is more likely to exceed the space actually available on
+   a narrower window, which forces every column (including the auto-width
+   Name column) to be squeezed proportionally smaller instead of the table
+   overflowing into `.table-wrap`'s horizontal scrollbar. The min-width
+   below (fixed columns' total + headroom for Name) is the fix. Source is
+   also given its own `.source-cell` rule further down so a long value like
+   "Monthly Spends (Aug/Sep-2026)" wraps inside its own column instead of
+   spilling past it (the global default is `white-space: nowrap` on every
+   table cell). */
+::ng-deep .table-wrap table { table-layout: fixed; min-width: 1090px; }
+::ng-deep .table-wrap th:first-child { width: auto; }
+::ng-deep .table-wrap th.num { width: 90px; }
+::ng-deep .table-wrap th.date-col { width: 95px; }
+::ng-deep .table-wrap th.source-col { width: 130px; }
+::ng-deep .table-wrap th.remarks-col { width: 160px; }
+::ng-deep .table-wrap th.docs-col { width: 140px; }
+::ng-deep .table-wrap th.actions-col { width: 40px; }
+
+.source-cell { white-space: normal; word-break: break-word; }
+
+/* `max-width` on a <td> is only a hint under the table's default auto
+   layout — browsers can still stretch the column to fit a long remark,
+   which was pushing the Edit/Delete buttons out of view. Capping the
+   width on this inner block (a normal block box, not a table cell) is
+   what actually holds the column steady. */
+.remarks-cell { white-space: normal; }
+.remarks-text {
+  max-width: 170px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.remarks-text.expanded {
+  max-width: 280px;
+  overflow: visible;
+  white-space: normal;
+  word-break: break-word;
+}
+.remarks-toggle {
+  display: block;
+  margin-top: 2px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.remarks-toggle:hover { text-decoration: underline; }
+
+.docs-cell { min-width: 0; }
+
+/* Documents and row actions used to show every button inline, which is
+   what was stretching these columns wide enough to push later columns
+   (and each other) out of view. Both now collapse behind one small toggle
+   and expand in place only when opened. */
+.cell-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border-soft);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.cell-toggle:hover { background: var(--surface-alt); color: var(--text); }
+.cell-toggle .chev { transition: transform 0.15s; flex: none; }
+.cell-toggle .chev.open { transform: rotate(180deg); }
+.cell-toggle.kebab {
+  padding: 5px;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+}
+.toggle-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--good);
+  flex: none;
+}
+
+.docs-expanded {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  min-width: 150px;
+}
+
+.row-actions { text-align: right; }
+
+/* PrimeNG's p-menu (in the component, appendTo="body") replaces the old
+   hand-rolled fixed-position dropdown, so it's no longer rendered nested in
+   the table and can't be clipped by the table's horizontal-scroll wrapper —
+   nothing to position or clip manually here any more. Its item styling
+   (including the danger-colored Delete item) is themed globally in
+   styles.scss so it matches every other actions menu in the app. */
+
+/* Only `width` here, never `display` — p-select and p-inputnumber set their
+   own `display: inline-flex` on this same host element (via their `.p-select`
+   / `.p-inputnumber` classes) to lay out their label/icon or input/spinner
+   internally; overriding that to `display: block` collapses that internal
+   flex layout and truncates the label to almost nothing. */
+.edit-row input[pInputText] {
+  width: 100%;
+  min-width: 70px;
+}
+.edit-row p-select, .edit-row p-inputnumber,
+.form-grid p-select, .form-grid p-inputnumber {
+  width: 100%;
+  min-width: 70px;
+}
+::ng-deep .form-grid p-inputnumber .p-inputnumber-input,
+::ng-deep .edit-row p-inputnumber .p-inputnumber-input {
+  width: 100%;
+}
+.edit-actions { display: flex; gap: 6px; align-items: center; }
+
+td.good { color: var(--good); }

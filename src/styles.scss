@@ -1,0 +1,366 @@
+@import "primeicons/primeicons.css";
+
+/* ============================================================
+   CrediTrack — global design tokens
+   ============================================================ */
+
+:root {
+  --bg: #F2F5FB;
+  --surface: #FFFFFF;
+  --surface-alt: #E8EFFB;
+  --surface-raise: #FFFFFF;
+  --border: #6B87C3;
+  --border-soft: #A5BBE6;
+  /* Darkened from the original #152341/#334166/#455680 — those washed out
+     against the light card/background colours, especially the muted/faint
+     tiers used for stat labels, subtitles and table headers. These are
+     noticeably darker so every text tier reads clearly at a glance. */
+  --text: #0E1830;
+  --text-muted: #26314F;
+  --text-faint: #3C4A6B;
+  --accent: #1D56C7;
+  --accent-strong: #143E96;
+  --accent-soft: #E2EBFC;
+  --accent-contrast: #FFFFFF;
+  --brass: #3B72D9;
+  --brass-soft: #E6EEFC;
+  --good: #287A4B;
+  --good-soft: #E1F3E7;
+  --warn: #8D6621;
+  --warn-soft: #FAF0DC;
+  --danger: #AA4D38;
+  --danger-soft: #F8E7E0;
+
+  /* One distinct accent per loan category, used for category headers, dots
+     and dashboard bars so sections are recognizable by colour, not just by
+     reading the label. */
+  --cat-app: #1D56C7;
+  --cat-bank: #0E7C86;
+  --cat-cards: #6B4FBB;
+  --cat-individual: #A85D1E;
+  --cat-magalir: #8D6621;
+  --cat-family: #A63E6B;
+
+  --radius: 14px;
+  --radius-sm: 8px;
+  --shadow-sm: 0 1px 2px rgba(21, 35, 65, 0.06), 0 1px 1px rgba(21, 35, 65, 0.04);
+  --shadow-md: 0 4px 14px rgba(21, 35, 65, 0.08), 0 1px 3px rgba(21, 35, 65, 0.06);
+  --font-head: "Fraunces", Georgia, serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0B1526;
+    --surface: #111E36;
+    --surface-alt: #15233F;
+    --surface-raise: #16233F;
+    --border: #4A62A0;
+    --border-soft: #2E4470;
+    --text: #EAF0FF;
+    --text-muted: #9FB0D6;
+    --text-faint: #8494C2;
+    --accent: #5C9BFF;
+    --accent-strong: #8CBBFF;
+    --accent-soft: rgba(92, 155, 255, 0.16);
+    --accent-contrast: #071026;
+    --brass: #6FA0F5;
+    --brass-soft: rgba(111, 160, 245, 0.14);
+    --good: #6FCB8E;
+    --good-soft: rgba(111, 203, 142, 0.14);
+    --warn: #E0B45B;
+    --warn-soft: rgba(224, 180, 91, 0.14);
+    --danger: #E58F73;
+    --danger-soft: rgba(229, 143, 115, 0.14);
+
+    --cat-app: #5C9BFF;
+    --cat-bank: #4FC4CE;
+    --cat-cards: #B39DDB;
+    --cat-individual: #E0975A;
+    --cat-magalir: #E0B45B;
+    --cat-family: #E497BC;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.28), 0 1px 1px rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.34), 0 1px 3px rgba(0, 0, 0, 0.24);
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #0B1526;
+  --surface: #111E36;
+  --surface-alt: #15233F;
+  --surface-raise: #16233F;
+  --border: #4A62A0;
+  --border-soft: #2E4470;
+  --text: #EAF0FF;
+  --text-muted: #9FB0D6;
+  --text-faint: #8494C2;
+  --accent: #5C9BFF;
+  --accent-strong: #8CBBFF;
+  --accent-soft: rgba(92, 155, 255, 0.16);
+  --accent-contrast: #071026;
+  --brass: #6FA0F5;
+  --brass-soft: rgba(111, 160, 245, 0.14);
+  --good: #6FCB8E;
+  --good-soft: rgba(111, 203, 142, 0.14);
+  --warn: #E0B45B;
+  --warn-soft: rgba(224, 180, 91, 0.14);
+  --danger: #E58F73;
+  --danger-soft: rgba(229, 143, 115, 0.14);
+
+  --cat-app: #5C9BFF;
+  --cat-bank: #4FC4CE;
+  --cat-cards: #B39DDB;
+  --cat-individual: #E0975A;
+  --cat-magalir: #E0B45B;
+  --cat-family: #E497BC;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.28), 0 1px 1px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.34), 0 1px 3px rgba(0, 0, 0, 0.24);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-head);
+  margin: 0;
+  color: var(--text);
+}
+
+.num, .money, .mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+a { color: var(--accent); }
+
+button, input, select, textarea {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+::selection { background: var(--accent-soft); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background 0.15s, border-color 0.15s;
+}
+.btn:hover { background: var(--surface-alt); }
+.btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+}
+.btn.primary:hover { background: var(--accent-strong); border-color: var(--accent-strong); }
+.btn.danger-outline { color: var(--danger); border-color: var(--danger-soft); }
+.btn.small { padding: 5px 10px; font-size: 12px; }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  padding: 18px;
+  box-shadow: var(--shadow-sm);
+}
+
+/* PrimeNG's own `.p-card` base style ships a fixed border-radius that
+   doesn't reference our `--radius` token at all — confirmed by testing that
+   changing `--radius` alone left every card's corners unchanged. This rule
+   is unscoped (styles.scss carries no Angular view-encapsulation attribute),
+   so — unlike a component-level rule targeting `.p-card` — it reaches the
+   real card box everywhere in the app without needing `::ng-deep`. The
+   two-class selector matches PrimeNG's own "p-card p-component" pairing
+   with higher specificity than PrimeNG's single-class default, so it wins
+   regardless of stylesheet load order, no `!important` needed. */
+.p-card.p-component { border-radius: var(--radius); }
+
+/* A round, tinted background behind an icon — used on dashboard tiles and
+   sidebar nav so icons read as deliberate UI, not stray line art. */
+.icon-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  flex: none;
+}
+.icon-chip svg { width: 18px; height: 18px; }
+.icon-chip.tone-accent { background: var(--accent-soft); color: var(--accent-strong); }
+.icon-chip.tone-good { background: var(--good-soft); color: var(--good); }
+.icon-chip.tone-warn { background: var(--warn-soft); color: var(--warn); }
+.icon-chip.tone-brass { background: var(--brass-soft); color: var(--brass); }
+.icon-chip.tone-danger { background: var(--danger-soft); color: var(--danger); }
+
+/* A small coloured dot, one per loan category, so sections are recognizable
+   by colour at a glance across Active Loans, Closed Loans and the Dashboard. */
+.cat-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: none;
+}
+.cat-dot.c-app-loans { background: var(--cat-app); }
+.cat-dot.c-bank-loans { background: var(--cat-bank); }
+.cat-dot.c-credit-cards { background: var(--cat-cards); }
+.cat-dot.c-individual-loans { background: var(--cat-individual); }
+.cat-dot.c-magalir-loans-chits-gold { background: var(--cat-magalir); }
+.cat-dot.c-family-credit-funds-other { background: var(--cat-family); }
+
+/* Same per-category colour as `.cat-dot.c-*` above, exposed as the
+   `--cat-color` custom property instead of a background — so any element
+   carrying `.cat-accent` plus the category's slug class (the category
+   group cards on Active/Closed Loans) can build a left border, a tinted
+   header and a colour-matched subtotal from one variable, and it already
+   adapts between light and dark since it just points at the same --cat-*
+   tokens defined above. */
+.cat-accent.c-app-loans { --cat-color: var(--cat-app); }
+.cat-accent.c-bank-loans { --cat-color: var(--cat-bank); }
+.cat-accent.c-credit-cards { --cat-color: var(--cat-cards); }
+.cat-accent.c-individual-loans { --cat-color: var(--cat-individual); }
+.cat-accent.c-magalir-loans-chits-gold { --cat-color: var(--cat-magalir); }
+.cat-accent.c-family-credit-funds-other { --cat-color: var(--cat-family); }
+.cat-accent { border-left: 5px solid var(--cat-color, var(--border-soft)); }
+
+/* The clickable header bar atop each Active/Closed Loans category card —
+   shared here rather than duplicated per component, since both pages use
+   the identical accordion pattern: a coloured dot with a soft ring, the
+   full category name (never truncated), a loan-count badge, a
+   colour-matched subtotal, and a chevron that flips when expanded. */
+.cat-toggle {
+  all: unset;
+  cursor: pointer;
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: var(--radius-sm);
+}
+.cat-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.cat-dot-ring {
+  display: inline-flex;
+  border-radius: 50%;
+  flex: none;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--cat-color, var(--border-soft)) 30%, transparent);
+}
+.cat-name { flex: 1 1 auto; min-width: 0; overflow-wrap: break-word; }
+.cat-count {
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--cat-color, var(--text-muted));
+  background: color-mix(in srgb, var(--cat-color, var(--border-soft)) 14%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--cat-color, var(--border-soft)) 35%, transparent);
+  border-radius: 999px;
+  padding: 2px 9px;
+  flex: none;
+}
+.cat-subtotal { font-size: 15px; font-weight: 700; color: var(--cat-color, var(--text)); flex: none; }
+.cat-chev { transition: transform 0.18s ease; flex: none; color: var(--text-faint); font-size: 13px; }
+.cat-chev.open { transform: rotate(180deg); }
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  background: var(--surface-alt);
+  color: var(--text-muted);
+}
+.pill.active { background: var(--accent-soft); color: var(--accent-strong); }
+.pill.settlement { background: var(--brass-soft); color: var(--brass); }
+.pill.discussion { background: var(--warn-soft); color: var(--warn); }
+.pill.closed, .pill.paid { background: var(--good-soft); color: var(--good); }
+.pill.pending { background: var(--warn-soft); color: var(--warn); }
+.pill.expense { background: var(--accent-soft); color: var(--accent-strong); }
+
+.type-tag {
+  display: inline-flex;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+.type-tag.settlement { background: var(--brass-soft); color: var(--brass); }
+
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--border-soft); white-space: nowrap; }
+th { color: var(--text-muted); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.04em; }
+td.num, th.num { text-align: right; }
+td.name { white-space: normal; min-width: 160px; }
+tr.subtotal td { background: var(--surface-alt); font-weight: 600; }
+tr.subtotal-row td { background: var(--surface-alt); font-weight: 600; }
+
+.field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+.field label { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+.field input, .field select, .field textarea {
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.empty-note { color: var(--text-faint); font-size: 13px; padding: 18px 0; }
+
+/* Printing/"Save as PDF" (Ctrl+P) paginates the page purely by vertical
+   space, with no awareness of a card's border — so a tall card (the
+   "Loan balance reduction" chart is the worst offender: it can run past
+   400px) that straddles a page boundary gets sliced in half: the top half
+   keeps the card's border/heading but the chart inside is cut off blank,
+   and the bottom half of the chart reappears at the top of the next page
+   with no border at all. That's the exact "chart alignment is wrong"
+   effect the printed dashboard was showing. `break-inside: avoid` tells
+   the print layout to push a card onto the next page as a whole instead
+   of splitting it — the standard fix for this, and it's harmless on
+   screen (this property only has an effect when paginating). Applied
+   globally since every page uses the same p-card pattern.
+   Note separately: browsers standardly render printed pages in light
+   colours regardless of the page's live dark/light theme — a PDF export
+   is not a reliable way to check whether dark mode is actually working
+   on screen. */
+@media print {
+  .p-card.p-component { break-inside: avoid; page-break-inside: avoid; }
+}
+
+/* Row-actions menus (Active/Closed Loans) pass styleClass: 'danger-item' on
+   their Delete MenuItem so it reads as destructive, same as the old
+   .btn.danger-outline did. Global because the same p-menu pattern repeats
+   on every page that has a per-row actions menu. */
+.p-menu .danger-item, .p-menu li.danger-item > * {
+  color: var(--danger) !important;
+}
+
+img { max-width: 100%; }
+[hidden] { display: none !important; }

@@ -1,0 +1,155 @@
+.page-header { margin-bottom: 22px; }
+.page-sub { color: var(--text-muted); margin-top: 4px; font-size: 13px; }
+
+/* All 6 stat tiles in a single row on any reasonably wide screen — an
+   auto-fit grid was letting the 6th tile wrap onto its own row whenever it
+   couldn't quite fit at 180px. Below 1100px there isn't room for 6 readable
+   columns, so it steps down to 3 and then 2 instead of squeezing further. */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 22px;
+}
+@media (max-width: 1100px) {
+  .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+/* `p-card styleClass="tile"` puts the "tile" class on the bordered box
+   PrimeNG's OWN Card component renders in ITS OWN template — that box never
+   carries this dashboard component's Angular style-scoping attribute, only
+   the icon/label/value/foot elements *inside* it (authored directly in this
+   template) do. Every plain `.tile ...` rule below silently failed to match
+   anything because of that missing attribute on the ancestor half of the
+   selector — so none of this block's height, spacing, font-size or color
+   was ever actually reaching the page; only browser/PrimeNG defaults were.
+   `::ng-deep` drops that scoping requirement so these rules can match the
+   real, unscoped `.tile` box while still being tied to its descendants.
+
+   Separately: `.tile`'s own height was always meant to be `auto`-derived by
+   content, but the grid stretches each tile's outer wrapper to match the
+   row's tallest tile — so once these rules actually apply, `height: 100%`
+   is needed too, or six tiles with foot text of very different lengths
+   ("22 settled" vs. a three-line "₹X paid of ₹Y across Z closed loans")
+   still end at different heights, leaving the row's borders jagged instead
+   of flush. `margin-top: auto` on `.foot` then sends the footer text to the
+   bottom of that now-equal height, so every icon/label/value lines up at
+   the top and every border lines up at the bottom regardless of foot
+   length. */
+::ng-deep .tile { min-width: 0; height: 100%; transition: box-shadow 0.15s, transform 0.15s; }
+::ng-deep .tile:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+::ng-deep .tile .icon-chip { margin-bottom: 12px; }
+::ng-deep .tile .label { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+::ng-deep .tile .value { font-family: var(--font-mono); font-size: 19px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+::ng-deep .tile .value.good { color: var(--good); }
+::ng-deep .tile .foot { font-size: 11.5px; color: var(--text-faint); margin-top: auto; padding-top: 4px; }
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 900px) {
+  .grid-2 { grid-template-columns: 1fr; }
+}
+
+h3 { font-size: 15px; margin-bottom: 14px; }
+
+.catbars { display: flex; flex-direction: column; gap: 12px; }
+.catbar-row { display: flex; align-items: center; gap: 10px; font-size: 12.5px; }
+/* Was a fixed 150px with an ellipsis, which clipped the longer category
+   names ("Magalir Loans / Chits / Gold", "Family Credit Funds / Other") to
+   something like "Magalir Loans / Chits / G…" — never fully readable. A
+   wider fixed column that allows wrapping instead keeps every row's dot /
+   name / bar / amount aligned while showing the full name, wrapping to a
+   second line only for the couple of categories long enough to need it. */
+.cname { width: 190px; flex: none; color: var(--text-muted); overflow-wrap: break-word; line-height: 1.3; white-space: normal; }
+.catbar-track { flex: 1; height: 9px; background: var(--surface-alt); border-radius: 5px; overflow: hidden; }
+.catbar-fill { height: 100%; border-radius: 5px; transition: width 0.3s; }
+.camt { width: 78px; flex: none; text-align: right; }
+
+.suggestions-card { margin-bottom: 16px; }
+.catbars-card { margin-bottom: 16px; }
+
+/* Both remaining charts (monthly spends, projected payoff) run full width,
+   stacked — the "Loan balance reduction" chart that used to share this row
+   was removed, so there's no second column to size against anymore. */
+.charts-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.chart-card-wide { grid-column: 1 / -1; }
+/* p-chart's canvas fills whatever box it's given, so the box needs an
+   explicit height — Chart.js can't size itself from content. */
+.chart-box { height: 260px; }
+
+/* PrimeNG's <p-chart> host defaults to display:inline and never stretches
+   to fill its parent, so without this Chart.js's `responsive` sizing falls
+   back to its built-in 150px default canvas height no matter how tall
+   .chart-box is set — every chart on this page was quietly stuck at 150px
+   tall before this rule existed. ::ng-deep is required since p-chart's
+   internal wrapper div is inside that component's own template, outside
+   this component's view encapsulation. */
+::ng-deep .chart-box p-chart {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+::ng-deep .chart-box p-chart > div {
+  width: 100%;
+  height: 100%;
+}
+
+.payoff-suggestion {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin-top: 12px;
+}
+.suggestions { display: flex; flex-direction: column; gap: 12px; }
+.suggestion {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+}
+.suggestion-text { min-width: 0; }
+.s-title { font-weight: 600; font-size: 13.5px; margin-bottom: 3px; }
+.s-detail { font-size: 12.5px; color: var(--text-muted); line-height: 1.5; }
+
+/* A fixed 3-per-row grid — not 6, since these cards sit two-up in
+   `.grid-2` and are only half the page wide; 6 columns here would squeeze
+   every figure down to an unreadable width. This is the same class of bug
+   the main dashboard's `.tiles` grid had (a fixed column count that stops
+   dividing evenly once the item count changes), so this stays a multiple
+   of the item count rather than a number picked to fit today's six. */
+.lm-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px 14px;
+  margin-bottom: 14px;
+}
+.ms-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  min-width: 0;
+}
+.ms-stat b {
+  font-size: 14px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (max-width: 500px) {
+  .lm-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

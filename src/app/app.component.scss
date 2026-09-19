@@ -1,0 +1,33 @@
+.shell {
+  display: flex;
+  min-height: 100vh;
+  align-items: stretch;
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+  padding: 28px 32px 96px;
+}
+
+@media (max-width: 700px) {
+  .content {
+    padding: 18px 16px 84px;
+  }
+}
+
+.connecting-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.connecting-card {
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+}
+.connecting-card h2 { font-size: 17px; margin-bottom: 6px; }
+.connecting-card .page-sub { color: var(--text-muted); font-size: 13px; margin: 0 0 16px; }

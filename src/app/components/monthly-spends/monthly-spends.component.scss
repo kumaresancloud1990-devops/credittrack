@@ -1,0 +1,93 @@
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.page-sub { color: var(--text-muted); margin-top: 4px; font-size: 13px; }
+.header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.add-form { margin-bottom: 20px; }
+.add-form h3 { margin-bottom: 12px; }
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px 14px;
+}
+
+.month-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+/* Active/inactive look is now driven entirely by pButton's own
+   [severity]/[text] bindings on the button (see the template) — no custom
+   pill CSS needed here any more, since layering border/background/color
+   overrides on top of PrimeNG's button classes fought with its own
+   styling instead of complementing it. */
+
+.summary-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.ms-stats { display: flex; gap: 22px; flex-wrap: wrap; }
+.ms-stat { display: flex; flex-direction: column; gap: 4px; font-size: 11.5px; color: var(--text-muted); }
+.ms-stat b { font-size: 15px; color: var(--text); }
+
+.income-card { margin-bottom: 18px; }
+.income-card h3 { margin-bottom: 12px; }
+.income-rows { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.income-row {
+  display: grid;
+  grid-template-columns: 1fr 160px auto;
+  gap: 8px;
+  align-items: center;
+}
+.income-add-row {
+  display: grid;
+  grid-template-columns: 1fr 160px auto;
+  gap: 8px;
+  align-items: center;
+}
+@media (max-width: 560px) {
+  .income-row, .income-add-row { grid-template-columns: 1fr; }
+}
+
+/* Only `width` here, never `display` — p-select and p-inputnumber set their
+   own `display: inline-flex` on this same host element (via their `.p-select`
+   / `.p-inputnumber` classes) to lay out their label/icon or input/spinner
+   internally; overriding that to `display: block` collapses that internal
+   flex layout and truncates the label to almost nothing. */
+.income-row p-inputnumber, .income-add-row p-inputnumber,
+.form-grid p-select, .form-grid p-inputnumber {
+  width: 100%;
+  min-width: 70px;
+}
+::ng-deep .income-row p-inputnumber .p-inputnumber-input,
+::ng-deep .income-add-row p-inputnumber .p-inputnumber-input,
+::ng-deep .form-grid p-inputnumber .p-inputnumber-input {
+  width: 100%;
+}
+
+.error-banner {
+  border-color: var(--danger-soft);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.remark-note { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
+
+.edit-row td { vertical-align: top; padding-top: 8px; padding-bottom: 8px; }
+.edit-row .name input { width: 100%; }
+.edit-row .name .edit-subfield { margin-top: 6px; }
+.edit-row p-select, .edit-row p-inputnumber { width: 100%; min-width: 90px; }
+::ng-deep .edit-row p-inputnumber .p-inputnumber-input { width: 100%; }

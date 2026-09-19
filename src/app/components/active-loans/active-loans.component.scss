@@ -1,0 +1,178 @@
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.page-sub { color: var(--text-muted); margin-top: 4px; font-size: 13px; }
+
+.add-form {
+  margin-bottom: 20px;
+}
+.add-form h3 { margin-bottom: 12px; }
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px 14px;
+}
+
+.group-card {
+  margin-bottom: 18px;
+  padding: 16px 16px 8px;
+}
+.group-card h3 { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; font-size: 14.5px; margin-bottom: 0; color: var(--text); }
+.group-card .table-wrap { margin-top: 10px; }
+
+/* Every category's table used to size its columns independently (plain
+   HTML table auto-layout, one <table> per category) — so "Balance" in App
+   Loans could land at a different x-position than "Balance" in Bank Loans
+   the moment their content or column count (Documents is conditional)
+   differed. table-layout: fixed plus an explicit width on every column
+   except Name pins every other column to the same width in every category's
+   table; only Name is left to flex, since it's fine for the item name to
+   take up a bit more or less room depending on whether a category also has
+   a Documents column. Widths are set on the header <th> cells only —
+   table-layout: fixed derives the whole column's width from its first row. */
+/* table-layout: fixed derives every column's width from the header row, but
+   the table itself is still capped at 100% of its container (styles.scss
+   sets `table { width: 100%; }` globally). If the sum of the fixed column
+   widths below is close to or larger than the space actually available —
+   a narrower browser window, a smaller laptop screen — the browser has no
+   room to honor them and instead squeezes every column, including the
+   auto-width Name column, proportionally smaller, which is what wraps short
+   names onto two lines. Giving the table an explicit min-width equal to the
+   fixed columns' total (plus headroom for Name) stops that: below this
+   width the table now overflows its wrapper instead of squishing, and
+   `.table-wrap`'s existing `overflow-x: auto` turns that into a horizontal
+   scrollbar, which is the correct fallback on a narrow viewport. */
+::ng-deep .table-wrap table { table-layout: fixed; min-width: 1050px; }
+::ng-deep .table-wrap th:first-child { width: auto; }
+::ng-deep .table-wrap th.num { width: 100px; }
+::ng-deep .table-wrap th.status-col { width: 116px; }
+::ng-deep .table-wrap th.remarks-col { width: 170px; }
+::ng-deep .table-wrap th.docs-col { width: 140px; }
+::ng-deep .table-wrap th.actions-col { width: 40px; }
+
+.remark-note { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
+
+/* `max-width` on a <td> is only a hint under the table's default auto
+   layout — browsers can still stretch the column to fit a long remark,
+   which was pushing the Edit/Delete buttons out of view. Capping the
+   width on this inner block (a normal block box, not a table cell) is
+   what actually holds the column steady. */
+.remarks-cell { white-space: normal; }
+.remarks-text {
+  max-width: 170px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.remarks-text.expanded {
+  max-width: 280px;
+  overflow: visible;
+  white-space: normal;
+  word-break: break-word;
+}
+.remarks-toggle {
+  display: block;
+  margin-top: 2px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.remarks-toggle:hover { text-decoration: underline; }
+
+.docs-cell { min-width: 0; }
+
+/* Documents and row actions used to show every button inline, which is
+   what was stretching these columns wide enough to push later columns
+   (and each other) out of view. Both now collapse behind one small toggle
+   and expand in place only when opened. */
+.cell-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border-soft);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.cell-toggle:hover { background: var(--surface-alt); color: var(--text); }
+.cell-toggle .chev { transition: transform 0.15s; flex: none; }
+.cell-toggle .chev.open { transform: rotate(180deg); }
+.cell-toggle.kebab {
+  padding: 5px;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+}
+.toggle-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--good);
+  flex: none;
+}
+
+.docs-expanded {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  min-width: 150px;
+}
+
+.row-actions { text-align: right; }
+
+/* PrimeNG's p-menu (in the component, appendTo="body") replaces the old
+   hand-rolled fixed-position dropdown, so it's no longer rendered nested in
+   the table and can't be clipped by the table's horizontal-scroll wrapper —
+   nothing to position or clip manually here any more. Its item styling
+   (including the danger-colored Delete item) is themed globally in
+   styles.scss so it matches every other actions menu in the app. */
+
+/* Only `width` here, never `display` — p-select and p-inputnumber set their
+   own `display: inline-flex` on this same host element (via their `.p-select`
+   / `.p-inputnumber` classes) to lay out their label/icon or input/spinner
+   internally; overriding that to `display: block` (as an earlier version of
+   this rule did) collapses that internal flex layout and truncates the
+   label to almost nothing. Width alone stretches the host without touching
+   how PrimeNG arranges its own insides. */
+.edit-row input[pInputText] {
+  width: 100%;
+  min-width: 70px;
+}
+.edit-row p-select, .edit-row p-inputnumber,
+.form-grid p-select, .form-grid p-inputnumber {
+  width: 100%;
+  min-width: 70px;
+}
+.emi-edit-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 140px;
+}
+.edit-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+/* p-inputnumber's own inner <input> doesn't stretch to its host's width by
+   default — it needs telling explicitly. */
+::ng-deep .form-grid p-inputnumber .p-inputnumber-input,
+::ng-deep .edit-row p-inputnumber .p-inputnumber-input {
+  width: 100%;
+}

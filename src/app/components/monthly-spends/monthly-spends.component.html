@@ -1,0 +1,219 @@
+<header class="page-header">
+  <div>
+    <h1>Monthly Spends</h1>
+    <p class="page-sub">Everyday expenses and settlement payments, month by month.</p>
+  </div>
+  <div class="header-actions">
+    <button pButton type="button" severity="secondary" [outlined]="true" [label]="showAddMonth() ? 'Cancel' : '+ Add month'" (click)="toggleAddMonth()"></button>
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="!currentMonth() || !nextMonthKey() || cloning()"
+      [title]="nextMonthKey() ? 'Copy recurring expenses + income into ' + nextMonthKey() : ''"
+      [label]="'Clone this month → ' + (nextMonthKey() || 'next month')"
+      (click)="cloneToNextMonth()"
+    ></button>
+    <button pButton type="button" [disabled]="!currentMonth()" [label]="showAddEntry() ? 'Cancel' : '+ Add entry'" (click)="toggleAddEntry()"></button>
+  </div>
+</header>
+
+@if (cloneError()) {
+  <p-message severity="error" styleClass="error-banner">{{ cloneError() }}</p-message>
+}
+
+@if (showAddMonth()) {
+  <p-card styleClass="add-form">
+    <h3>Add a month</h3>
+    <div class="form-grid">
+      <div class="field">
+        <label>Month key (YYYY-MM)</label>
+        <input pInputText type="text" [ngModel]="newMonthKey()" (ngModelChange)="newMonthKey.set($event)" />
+      </div>
+      <div class="field">
+        <label>Label</label>
+        <input pInputText type="text" [ngModel]="newMonthLabel()" (ngModelChange)="newMonthLabel.set($event)" placeholder="e.g. Oct 2026" />
+      </div>
+    </div>
+    <button pButton type="button" label="Add month" (click)="addMonth()"></button>
+  </p-card>
+}
+
+<div class="month-tabs">
+  @for (key of monthKeys(); track key) {
+    <button
+      pButton
+      type="button"
+      size="small"
+      [severity]="currentMonth()?.key === key ? 'primary' : 'secondary'"
+      [text]="currentMonth()?.key !== key"
+      (click)="selectMonth(key)"
+    >
+      {{ data.spends()[key].label }}
+    </button>
+  }
+</div>
+
+@if (!currentMonth()) {
+  <div class="empty-note">No months logged yet — add one to get started.</div>
+} @else {
+  <p-card styleClass="income-card">
+    <h3>Income for {{ currentMonth()!.label }}</h3>
+    <div class="income-rows">
+      @for (inc of currentMonth()!.incomes; track inc.id) {
+        <div class="income-row">
+          <input
+            pInputText
+            type="text"
+            class="income-label"
+            [ngModel]="inc.label"
+            (ngModelChange)="updateIncomeLabel(inc.id, $event)"
+            placeholder="e.g. Salary"
+          />
+          <p-inputNumber
+            class="income-amount"
+            [ngModel]="inc.amount"
+            (ngModelChange)="updateIncomeAmount(inc.id, $event)"
+            [useGrouping]="false"
+          ></p-inputNumber>
+          <button pButton type="button" [text]="true" [rounded]="true" severity="secondary" icon="pi pi-times" (click)="deleteIncomeRow(inc.id)" title="Remove"></button>
+        </div>
+      }
+      @if (!currentMonth()!.incomes.length) {
+        <div class="empty-note">No income rows yet — add one below.</div>
+      }
+    </div>
+    <div class="income-add-row">
+      <input
+        pInputText
+        type="text"
+        placeholder="Label, e.g. Salary"
+        [ngModel]="newIncome().label"
+        (ngModelChange)="newIncome.set({ label: $event, amount: newIncome().amount })"
+      />
+      <p-inputNumber
+        placeholder="Amount"
+        [ngModel]="newIncome().amount"
+        (ngModelChange)="newIncome.set({ label: newIncome().label, amount: $event })"
+        [useGrouping]="false"
+      ></p-inputNumber>
+      <button pButton type="button" size="small" label="+ Add income" (click)="addIncomeRow()"></button>
+    </div>
+  </p-card>
+
+  <p-card styleClass="summary-card">
+    <div class="ms-stats">
+      <div class="ms-stat">Total income<b class="money">{{ fmtMoney(stats().income) }}</b></div>
+      <div class="ms-stat">Planned amount<b class="money">{{ fmtMoney(stats().totalAmt) }}</b></div>
+      <div class="ms-stat" title="Paid so far against the planned amount">Paid from planned<b class="money">{{ fmtMoney(stats().totalPaid) }}</b></div>
+      <div class="ms-stat" title="Planned amount still unpaid">Balance (unpaid plan)<b class="money">{{ fmtMoney(stats().balance) }}</b></div>
+      <div class="ms-stat" title="What would be left of this month's income if every planned expense got paid">Balance post all planned<b class="money">{{ fmtMoney(stats().postPlannedBalance) }}</b></div>
+      <div class="ms-stat" title="Income minus what's actually been paid so far — the money really still in the bank">Current bank balance<b class="money">{{ fmtMoney(stats().bankBalance) }}</b></div>
+    </div>
+  </p-card>
+
+  @if (showAddEntry()) {
+    <p-card styleClass="add-form">
+      <h3>Add an entry</h3>
+      <div class="form-grid">
+        <div class="field">
+          <label>Name</label>
+          <input pInputText type="text" [(ngModel)]="newEntry().name" />
+        </div>
+        <div class="field">
+          <label>Type</label>
+          <p-select [options]="entryTypeOptions" optionLabel="label" optionValue="value" [(ngModel)]="newEntry().type"></p-select>
+        </div>
+        <div class="field">
+          <label>Amount (₹)</label>
+          <p-inputNumber [(ngModel)]="newEntry().amount" [useGrouping]="false"></p-inputNumber>
+        </div>
+        <div class="field">
+          <label>Paid amount (₹, leave blank if unpaid)</label>
+          <p-inputNumber [(ngModel)]="newEntry().paidAmount" [useGrouping]="false"></p-inputNumber>
+        </div>
+        <div class="field">
+          <label>Date / remark</label>
+          <input pInputText type="text" [(ngModel)]="newEntry().date" />
+        </div>
+      </div>
+      <button pButton type="button" label="Add entry" (click)="addEntry()"></button>
+    </p-card>
+  }
+
+  @if (!currentMonth()!.entries.length) {
+    <div class="empty-note">No entries in this month yet.</div>
+  } @else {
+    <p-card>
+      <div class="table-wrap">
+        <p-table [value]="currentMonth()!.entries" styleClass="p-datatable-sm">
+          <ng-template pTemplate="header">
+            <tr>
+              <th>Item</th>
+              <th>Type</th>
+              <th class="num">Amount</th>
+              <th class="num">Paid</th>
+              <th>Status</th>
+              <th>Link</th>
+              <th></th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-e let-i="rowIndex">
+            @if (editingIndex() === i) {
+              <tr class="edit-row">
+                <td class="name">
+                  <input pInputText type="text" [(ngModel)]="editEntry().name" placeholder="Name" />
+                  <input pInputText type="text" [(ngModel)]="editEntry().date" placeholder="Date / remark" class="edit-subfield" />
+                </td>
+                <td><p-select [options]="entryTypeOptions" optionLabel="label" optionValue="value" [(ngModel)]="editEntry().type"></p-select></td>
+                <td class="num"><p-inputNumber [(ngModel)]="editEntry().amount" [useGrouping]="false"></p-inputNumber></td>
+                <td class="num"><p-inputNumber [(ngModel)]="editEntry().paidAmount" [useGrouping]="false"></p-inputNumber></td>
+                <td></td>
+                <td></td>
+                <td>
+                  <button pButton type="button" [text]="true" [rounded]="true" severity="success" icon="pi pi-check" (click)="saveEdit()" title="Save"></button>
+                  <button pButton type="button" [text]="true" [rounded]="true" severity="secondary" icon="pi pi-times" (click)="cancelEdit()" title="Cancel"></button>
+                </td>
+              </tr>
+            } @else {
+              <tr>
+                <td class="name">
+                  {{ e.name }}
+                  @if (e.date) { <div class="remark-note">{{ e.date }}</div> }
+                  @if (e.remarks) { <div class="remark-note">{{ e.remarks }}</div> }
+                </td>
+                <td><p-tag [value]="e.type === 'settlement' ? 'Settlement' : 'Expense'" [severity]="e.type === 'settlement' ? 'warn' : 'info'"></p-tag></td>
+                <td class="num money">{{ fmtMoney(e.amount) }}</td>
+                <td class="num money">{{ e.paidAmount != null ? fmtMoney(e.paidAmount) : '—' }}</td>
+                <td>
+                  @if (e.paidAmount != null) {
+                    <p-tag
+                      [value]="(e.amount - e.paidAmount) <= 0 ? 'Paid' : 'Balance ' + fmtMoney(e.amount - e.paidAmount)"
+                      [severity]="(e.amount - e.paidAmount) <= 0 ? 'success' : 'warn'"
+                    ></p-tag>
+                  } @else {
+                    <p-tag value="Pending" severity="warn"></p-tag>
+                  }
+                </td>
+                <td>
+                  @if (e.applied) {
+                    <p-tag value="Applied &#10003;" severity="success"></p-tag>
+                  } @else {
+                    @if (findMatch(e); as match) {
+                      <button pButton type="button" size="small" severity="secondary" [outlined]="true" [label]="'Apply to \'' + match.name + '\''" (click)="apply(i, match.id)"></button>
+                    }
+                  }
+                </td>
+                <td>
+                  <button pButton type="button" [text]="true" [rounded]="true" severity="secondary" icon="pi pi-pencil" (click)="startEdit(i, e)" title="Edit"></button>
+                  <button pButton type="button" [text]="true" [rounded]="true" severity="secondary" icon="pi pi-times" (click)="deleteEntry(i)" title="Delete"></button>
+                </td>
+              </tr>
+            }
+          </ng-template>
+        </p-table>
+      </div>
+    </p-card>
+  }
+}

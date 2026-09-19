@@ -1,0 +1,186 @@
+<header class="page-header">
+  <h1>Dashboard</h1>
+  <p class="page-sub">Everything owed, everything paid, in one place.</p>
+</header>
+
+<div class="tiles">
+  <p-card styleClass="tile">
+    <span class="icon-chip tone-accent">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 7a2 2 0 012-2h13a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>
+        <path d="M16 12h3"/>
+      </svg>
+    </span>
+    <div class="label">Active balance</div>
+    <div class="value">{{ fmtMoney(data.totalActiveBalance()) }}</div>
+    <div class="foot">{{ data.loans().length }} open item{{ data.loans().length === 1 ? '' : 's' }}</div>
+  </p-card>
+  <p-card styleClass="tile">
+    <span class="icon-chip tone-good">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="9"/>
+        <path d="M8.5 12.5l2.5 2.5 4.5-5"/>
+      </svg>
+    </span>
+    <div class="label">Closed / paid off</div>
+    <div class="value good">{{ fmtMoney(data.totalClosedPaid()) }}</div>
+    <div class="foot">{{ data.closed().length }} settled</div>
+  </p-card>
+  <p-card styleClass="tile">
+    <span class="icon-chip tone-brass">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="5" width="18" height="16" rx="2"/>
+        <path d="M3 10h18M8 3v4M16 3v4"/>
+      </svg>
+    </span>
+    <div class="label">EMI due / month</div>
+    <div class="value">{{ fmtMoney(data.totalEmiPerMonth()) }}</div>
+    <div class="foot">across recurring EMIs</div>
+  </p-card>
+  <p-card styleClass="tile">
+    <span class="icon-chip tone-accent">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="9" cy="8" r="3.2"/>
+        <path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/>
+        <circle cx="17" cy="9" r="2.4"/>
+        <path d="M15.5 14c2.3.3 4 2 4 5"/>
+      </svg>
+    </span>
+    <div class="label">Family credit funds</div>
+    <div class="value">{{ fmtMoney(data.totalFamilyCredit()) }}</div>
+    <div class="foot">informal family arrangements</div>
+  </p-card>
+  <p-card styleClass="tile">
+    <span class="icon-chip tone-warn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="9"/>
+        <path d="M12 7v5l3.5 2"/>
+      </svg>
+    </span>
+    <div class="label">Pending EMIs</div>
+    <div class="value">{{ data.pendingEmiCount() }}</div>
+    <div class="foot">{{ fmtMoney(data.totalEmiPerMonth()) }} due / month</div>
+  </p-card>
+  <p-card styleClass="tile">
+    <span class="icon-chip tone-good">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 6l6.5 6.5 4-4L21 16"/>
+        <path d="M21 9v7h-7"/>
+      </svg>
+    </span>
+    <div class="label">Total savings</div>
+    <div class="value good">{{ fmtMoney(data.totalSavings()) }}</div>
+    <div class="foot">
+      {{ fmtMoney(data.totalClosedSettled()) }} paid of {{ fmtMoney(data.totalClosedOriginal()) }} across
+      {{ data.closed().length }} closed loan{{ data.closed().length === 1 ? '' : 's' }}
+    </div>
+  </p-card>
+</div>
+
+@if (data.payoffSuggestions().length) {
+  <p-card styleClass="suggestions-card">
+    <h3>Suggestions to reduce your borrowing</h3>
+    <div class="suggestions">
+      @for (s of data.payoffSuggestions(); track s.id + s.kind) {
+        <div class="suggestion" [class]="'kind-' + s.kind">
+          <span class="icon-chip" [class]="s.kind === 'quick-win' ? 'tone-good' : s.kind === 'relief' ? 'tone-accent' : 'tone-warn'">
+            @if (s.kind === 'quick-win') {
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/></svg>
+            } @else if (s.kind === 'relief') {
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l6.5 6.5 4-4L21 16"/><path d="M21 9v7h-7"/></svg>
+            } @else {
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16.2v.1"/></svg>
+            }
+          </span>
+          <div class="suggestion-text">
+            <div class="s-title">{{ s.title }}</div>
+            <div class="s-detail">{{ s.detail }}</div>
+          </div>
+        </div>
+      }
+    </div>
+  </p-card>
+}
+
+<div class="charts-grid">
+  <p-card styleClass="chart-card chart-card-wide">
+    <h3>Monthly spends — planned, paid &amp; income</h3>
+    @if (data.monthlySpendTrend().length) {
+      <div class="chart-box">
+        <p-chart #monthlySpendChart type="line" [data]="monthlySpendChartData()" [options]="monthlySpendChartOptions()"></p-chart>
+      </div>
+    } @else {
+      <div class="empty-note">No months logged yet — add one under Monthly Spends to see the trend here.</div>
+    }
+  </p-card>
+
+  <p-card styleClass="chart-card chart-card-wide">
+    <h3>Projected loan payoff</h3>
+    @if (data.payoffProjection().timeline.length) {
+      <div class="chart-box">
+        <p-chart #payoffChart type="line" [data]="payoffChartData()" [options]="payoffChartOptions()"></p-chart>
+      </div>
+    }
+    <p class="payoff-suggestion">{{ payoffSuggestionText() }}</p>
+  </p-card>
+</div>
+
+<p-card styleClass="catbars-card">
+  <h3>Balance by category</h3>
+  <div class="catbars">
+    @for (bar of categoryBars(); track bar.name) {
+      <div class="catbar-row">
+        <span class="cat-dot" [class]="catSlug(bar.name)"></span>
+        <div class="cname">{{ bar.name }}</div>
+        <div class="catbar-track"><div class="catbar-fill" [style.width.%]="bar.pct" [style.background]="'var(' + catColorVar(bar.name) + ')'"></div></div>
+        <div class="camt num" [style.color]="'var(' + catColorVar(bar.name) + ')'">{{ fmtMoneyShort(bar.value) }}</div>
+      </div>
+    }
+  </div>
+</p-card>
+
+<div class="grid-2">
+  <p-card>
+    <ng-container *ngTemplateOutlet="monthCardTpl; context: { $implicit: thisMonthCard(), title: 'This month' }"></ng-container>
+  </p-card>
+  <p-card>
+    <ng-container *ngTemplateOutlet="monthCardTpl; context: { $implicit: previousMonthCard(), title: 'Last month' }"></ng-container>
+  </p-card>
+</div>
+
+<ng-template #monthCardTpl let-mc let-title="title">
+  @if (mc) {
+    <h3>{{ title }} — {{ mc.label }}</h3>
+    <div class="lm-stats">
+      <div class="ms-stat">Income<b class="money">{{ fmtMoney(mc.income) }}</b></div>
+      <div class="ms-stat">Planned<b class="money">{{ fmtMoney(mc.totalAmt) }}</b></div>
+      <div class="ms-stat" title="Paid so far against the planned amount">Paid<b class="money">{{ fmtMoney(mc.totalPaid) }}</b></div>
+      <div class="ms-stat" title="Planned amount still unpaid">Balance (unpaid plan)<b class="money">{{ fmtMoney(mc.balance) }}</b></div>
+      <div class="ms-stat" title="What would be left of this month's income if every planned expense got paid">Balance post all planned<b class="money">{{ fmtMoney(mc.postPlannedBalance) }}</b></div>
+      <div class="ms-stat" title="Income minus what's actually been paid so far — the money really still in the bank">Current bank balance<b class="money">{{ fmtMoney(mc.bankBalance) }}</b></div>
+    </div>
+    @if (mc.entries.length) {
+      <p-table [value]="mc.entries" styleClass="p-datatable-sm">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Item</th>
+            <th class="num">Amount</th>
+            <th class="num">Paid</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-e>
+          <tr>
+            <td class="name">{{ e.name }}</td>
+            <td class="num money">{{ fmtMoney(e.amount) }}</td>
+            <td class="num money">{{ e.paidAmount != null ? fmtMoney(e.paidAmount) : '—' }}</td>
+          </tr>
+        </ng-template>
+      </p-table>
+    } @else {
+      <div class="empty-note">No entries logged for this month yet.</div>
+    }
+  } @else {
+    <h3>{{ title }}</h3>
+    <div class="empty-note">No entries logged yet — add one under Monthly Spends.</div>
+  }
+</ng-template>

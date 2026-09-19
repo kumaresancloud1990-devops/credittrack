@@ -1,0 +1,67 @@
+<!-- The upload/replace buttons stay plain <label>+hidden <input type="file">
+     elements (not pButton) — that's the only reliable cross-browser way to
+     trigger a native file picker from a styled control, and swapping in a
+     PrimeNG component here would risk breaking the file selection itself.
+     They're still styled to match the rest of the app via the shared global
+     `.btn` class, whose colors already track the same --accent palette the
+     PrimeNG theme (credittrack-preset.ts) is built from. -->
+<div class="doc-upload">
+  @if (existingDoc) {
+    <button type="button" class="doc-link" (click)="openPreview()">
+      <i class="pi pi-file" style="font-size: 12px"></i>
+      <span class="doc-name">{{ existingDoc.fileName }}</span>
+    </button>
+    <label class="btn small reupload">
+      {{ uploading() ? 'Uploading…' : 'Replace' }}
+      <input type="file" accept=".pdf,.jpg,.jpeg,.png" (change)="onFileSelected($event)" [disabled]="uploading()" hidden />
+    </label>
+  } @else {
+    <label class="btn small upload-btn">
+      {{ uploading() ? 'Uploading…' : 'Upload ' + labels[kind] }}
+      <input type="file" accept=".pdf,.jpg,.jpeg,.png" (change)="onFileSelected($event)" [disabled]="uploading()" hidden />
+    </label>
+  }
+  @if (error()) {
+    <div class="doc-error">{{ error() }}</div>
+  }
+</div>
+
+<p-dialog
+  [visible]="previewOpen()"
+  (visibleChange)="!$event && closePreview()"
+  [modal]="true"
+  [header]="existingDoc?.fileName || 'Document'"
+  [style]="{ width: '90vw', maxWidth: '760px' }"
+  [breakpoints]="{ '640px': '96vw' }"
+>
+  <div class="preview-body">
+    @if (previewLoading()) {
+      <div class="preview-status">
+        <i class="pi pi-spin pi-spinner"></i>
+        <span>Loading preview…</span>
+      </div>
+    } @else if (previewError()) {
+      <div class="preview-status preview-error">
+        <i class="pi pi-exclamation-triangle"></i>
+        <span>{{ previewError() }}</span>
+      </div>
+    } @else if (previewKind() === 'pdf' && previewUrl()) {
+      <iframe class="preview-frame" [src]="previewUrl()" title="Document preview"></iframe>
+    } @else if (previewKind() === 'image' && previewUrl()) {
+      <img class="preview-image" [src]="previewUrl()" alt="Document preview" />
+    } @else {
+      <div class="preview-status">
+        <i class="pi pi-file"></i>
+        <span>No in-app preview for this file type — open it in Google Drive instead.</span>
+      </div>
+    }
+  </div>
+  <ng-template pTemplate="footer">
+    @if (existingDoc?.driveViewLink) {
+      <a [href]="existingDoc!.driveViewLink" target="_blank" rel="noopener" class="drive-fallback-link">
+        Open in Drive <i class="pi pi-external-link" style="font-size: 11px"></i>
+      </a>
+    }
+    <button pButton type="button" severity="secondary" [outlined]="true" size="small" label="Close" (click)="closePreview()"></button>
+  </ng-template>
+</p-dialog>

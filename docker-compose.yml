@@ -1,0 +1,93 @@
+# CrediTrack — full Docker stack.
+#
+# Brings up Postgres, the Node/Express backend, and the Angular frontend
+# (built and served by nginx) together, on one Docker network. See
+# DOCKER.md at the project root for the full walkthrough. Quick start:
+#
+#   1. copy .env.example to .env and fill in real passwords/passcode
+#   2. docker compose up -d --build
+#   3. docker compose run --rm migrate      (first time only)
+#   4. docker compose run --rm seed         (first time only, optional)
+#   5. open http://localhost:8080
+#
+name: credittrack
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:-postgres}
+      CREDITTRACK_MIGRATOR_PASSWORD: ${CREDITTRACK_MIGRATOR_PASSWORD:-change-me-migrator}
+      CREDITTRACK_APP_PASSWORD: ${CREDITTRACK_APP_PASSWORD:-change-me-app}
+    volumes:
+      - credittrack_pgdata:/var/lib/postgresql/data
+      # Auto-provisions the credittrack database + credittrack_migrator/credittrack_app
+      # roles the very first time this runs against an empty volume — see
+      # server/db/init/01-provision-roles.sh.
+      - ./server/db/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - '5432:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://credittrack_migrator:${CREDITTRACK_MIGRATOR_PASSWORD:-change-me-migrator}@db:5432/credittrack
+      APP_DATABASE_URL: postgresql://credittrack_app:${CREDITTRACK_APP_PASSWORD:-change-me-app}@db:5432/credittrack
+      DATABASE_SSL: 'false'
+      FAMILY_ACCESS_KEY: ${FAMILY_ACCESS_KEY:-change-me}
+      PORT: 4000
+    ports:
+      - '4000:4000'
+
+  # One-off jobs, not part of the normal `docker compose up`. Run by hand
+  # (see DOCKER.md) after `db` is provisioned. `--profile tools` keeps them
+  # out of `docker compose up`/`down` entirely.
+  migrate:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    profiles: ['tools']
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://credittrack_migrator:${CREDITTRACK_MIGRATOR_PASSWORD:-change-me-migrator}@db:5432/credittrack
+    command: ['npm', 'run', 'migrate']
+
+  seed:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    profiles: ['tools']
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://credittrack_migrator:${CREDITTRACK_MIGRATOR_PASSWORD:-change-me-migrator}@db:5432/credittrack
+      APP_DATABASE_URL: postgresql://credittrack_app:${CREDITTRACK_APP_PASSWORD:-change-me-app}@db:5432/credittrack
+    command: ['npm', 'run', 'seed']
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - '8080:80'
+
+volumes:
+  credittrack_pgdata:

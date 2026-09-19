@@ -1,0 +1,42 @@
+<header class="page-header">
+  <h1>EMI Calculator</h1>
+  <p class="page-sub">Work out the EMI for a new or planned loan.</p>
+</header>
+
+<div class="grid-2">
+  <p-card>
+    <div class="field">
+      <label>Principal (₹)</label>
+      <p-inputNumber [ngModel]="principal()" (ngModelChange)="principal.set($event)" [useGrouping]="false"></p-inputNumber>
+    </div>
+    <div class="field">
+      <label>Annual interest rate (%)</label>
+      <p-inputNumber [ngModel]="annualRate()" (ngModelChange)="annualRate.set($event)" [useGrouping]="false" [minFractionDigits]="0" [maxFractionDigits]="2"></p-inputNumber>
+    </div>
+    <div class="field">
+      <label>Tenure (months)</label>
+      <p-inputNumber [ngModel]="months()" (ngModelChange)="months.set($event)" [useGrouping]="false"></p-inputNumber>
+    </div>
+    <button pButton type="button" label="Add as a new loan" (click)="addAsLoan()"></button>
+  </p-card>
+
+  <p-card styleClass="result-card">
+    <h3>Result</h3>
+    <div class="result-row">
+      <span>Monthly EMI</span>
+      <b class="money">{{ fmtMoney(result().emi) }}</b>
+    </div>
+    <div class="result-row">
+      <span>Total interest</span>
+      <b class="money">{{ fmtMoney(result().totalInterest) }}</b>
+    </div>
+    <div class="result-row">
+      <span>Total payment</span>
+      <b class="money">{{ fmtMoney(result().totalPayment) }}</b>
+    </div>
+    <div class="result-row">
+      <span>Principal</span>
+      <b class="money">{{ fmtMoney(result().principal) }}</b>
+    </div>
+  </p-card>
+</div>

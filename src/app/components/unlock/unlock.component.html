@@ -1,0 +1,26 @@
+<div class="unlock-shell">
+  <form class="card unlock-card" (ngSubmit)="submit()">
+    <div class="mark">K</div>
+    <h1>CrediTrack</h1>
+    <p class="page-sub">Enter your family passcode to continue.</p>
+
+    <div class="field">
+      <label>Family passcode</label>
+      <input
+        type="password"
+        autofocus
+        [ngModel]="passcode()"
+        (ngModelChange)="passcode.set($event)"
+        name="passcode"
+        placeholder="Shared family passcode"
+      />
+    </div>
+
+    <button type="submit" class="btn primary unlock-btn" [disabled]="!passcode().trim()">Unlock</button>
+
+    <p class="hint">
+      This is the <code>FAMILY_ACCESS_KEY</code> set up on the backend server — ask
+      whoever set up the app if you don't have it.
+    </p>
+  </form>
+</div>

@@ -1,0 +1,35 @@
+.page-header { margin-bottom: 22px; }
+.page-sub { color: var(--text-muted); margin-top: 4px; font-size: 13px; }
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 800px) {
+  .grid-2 { grid-template-columns: 1fr; }
+}
+
+.field { margin-bottom: 14px; }
+.field label { display: block; margin-bottom: 6px; font-size: 12.5px; color: var(--text-muted); }
+
+/* Only `width` here, never `display` — see the same note in
+   active-loans.component.scss: p-inputnumber sets its own
+   `display: inline-flex` internally, and overriding that to `display: block`
+   collapses its label/spinner flex layout. */
+.field p-inputnumber { width: 100%; }
+::ng-deep .field p-inputnumber .p-inputnumber-input { width: 100%; }
+
+.result-card h3 { margin-bottom: 14px; }
+.result-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-soft);
+  font-size: 13.5px;
+  color: var(--text-muted);
+}
+.result-row:last-child { border-bottom: none; }
+.result-row b { font-size: 18px; color: var(--text); }

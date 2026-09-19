@@ -1,0 +1,12 @@
+# Keeps the frontend build context small and, more importantly, keeps
+# server/.env (real database passwords) from ever being sent to the
+# Docker daemon or baked into an image layer.
+node_modules
+server/node_modules
+dist
+.angular
+.git
+.vscode
+*.md
+server/.env
+.env
