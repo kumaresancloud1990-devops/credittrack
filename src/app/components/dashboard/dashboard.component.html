@@ -12,7 +12,7 @@
       </svg>
     </span>
     <div class="label">Active balance</div>
-    <div class="value">{{ fmtMoney(data.totalActiveBalance()) }}</div>
+    <div class="value">{{ fmtMoney(data.totalActiveOutstanding()) }}</div>
     <div class="foot">{{ data.loans().length }} open item{{ data.loans().length === 1 ? '' : 's' }}</div>
   </p-card>
   <p-card styleClass="tile">
@@ -99,6 +99,88 @@
         </div>
       }
     </div>
+  </p-card>
+}
+
+@if (data.closedFormalDocsLoans().length) {
+  <p-card styleClass="docs-pending-card">
+    <button type="button" class="cat-toggle" (click)="toggleDocsPanel()" [attr.aria-expanded]="docsPanelOpen()">
+      <div class="docs-pending-head">
+        <span class="icon-chip" [class]="data.closedDocsPending().length ? 'tone-warn' : 'tone-good'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8l-5-5z"/>
+            <path d="M14 3v5h5"/>
+          </svg>
+        </span>
+        <div class="docs-pending-text">
+          <div class="docs-pending-title">
+            Closed loan documents
+            @if (data.closedDocsPending().length) {
+              <span class="pill pending">{{ data.closedDocsPending().length }} pending</span>
+            } @else {
+              <span class="pill closed">All uploaded</span>
+            }
+          </div>
+          <div class="docs-pending-sub">
+            @if (data.closedDocsPending().length) {
+              {{ data.closedDocsPending().length }} closed Bank / App / Credit Card loan{{ data.closedDocsPending().length === 1 ? '' : 's' }} still need{{ data.closedDocsPending().length === 1 ? 's' : '' }} a Settlement Letter or NOC Copy uploaded
+            } @else {
+              Every closed Bank / App / Credit Card loan has both documents on file
+            }
+          </div>
+        </div>
+        <i class="pi pi-chevron-down cat-chev" [class.open]="docsPanelOpen()"></i>
+      </div>
+    </button>
+    @if (docsPanelOpen()) {
+      <div class="docs-pending-list">
+        @if (!data.closedDocsPending().length) {
+          <div class="empty-note">Nothing pending — every closed loan with formal paperwork has its documents on file.</div>
+        }
+        @for (loan of data.closedDocsPending(); track loan.id) {
+          <div class="pending-row">
+            <span class="cat-dot" [class]="catSlug(loan.category)"></span>
+            <div class="pending-row-text">
+              <div class="pending-name">{{ loan.name }}</div>
+              <div class="pending-missing">{{ missingDocLabels(loan) }} missing</div>
+            </div>
+            <button
+              pButton
+              type="button"
+              [text]="true"
+              [outlined]="true"
+              size="small"
+              severity="secondary"
+              class="cell-toggle"
+              (click)="togglePendingDocs(loan.id)"
+              [attr.aria-expanded]="isPendingDocsExpanded(loan.id)"
+            >
+              <i class="pi pi-upload"></i>
+              <span>Upload</span>
+              <i class="pi pi-chevron-down chev" [class.open]="isPendingDocsExpanded(loan.id)"></i>
+            </button>
+            @if (isPendingDocsExpanded(loan.id)) {
+              <div class="docs-expanded">
+                <app-document-upload
+                  [loanId]="loan.id"
+                  [loanName]="loan.name"
+                  kind="settlementLetter"
+                  [existingDoc]="loan.settlementLetter"
+                  (uploaded)="onDocUploaded(loan.id, 'settlementLetter', $event)"
+                ></app-document-upload>
+                <app-document-upload
+                  [loanId]="loan.id"
+                  [loanName]="loan.name"
+                  kind="nocCopy"
+                  [existingDoc]="loan.nocCopy"
+                  (uploaded)="onDocUploaded(loan.id, 'nocCopy', $event)"
+                ></app-document-upload>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
   </p-card>
 }
 

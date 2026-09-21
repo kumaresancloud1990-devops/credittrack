@@ -153,3 +153,88 @@ h3 { font-size: 15px; margin-bottom: 14px; }
 @media (max-width: 500px) {
   .lm-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* "Closed loan documents" card — a click-to-expand accordion (the `.cat-toggle`
+ * header-reset and `.cat-chev` rotate-on-open live in styles.scss, shared
+ * with the Active/Closed Loans category headers) that reveals which closed
+ * Bank/App/Credit Card loans are still missing a Settlement Letter or NOC
+ * Copy, each row expandable in place to the same upload widget Closed Loans
+ * itself uses — so the whole flow, from "what's missing" to "upload it",
+ * never has to leave the Dashboard. */
+.docs-pending-card { margin-bottom: 16px; }
+.docs-pending-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.docs-pending-text { flex: 1 1 auto; min-width: 0; }
+.docs-pending-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 14.5px;
+  color: var(--text);
+}
+.docs-pending-sub {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin-top: 3px;
+  line-height: 1.45;
+}
+.docs-pending-card .cat-chev { margin-top: 6px; }
+
+.docs-pending-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+}
+/* Rows wrap onto their own lines on a narrow screen (name/missing-labels
+ * stack above the Upload button instead of squeezing sideways), and the
+ * expanded upload widgets always take the full row width regardless of
+ * viewport — same responsive approach as Closed Loans' own Documents
+ * column, just applied to a card layout instead of a table. */
+.pending-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+}
+.pending-row-text { flex: 1 1 160px; min-width: 0; }
+.pending-name { font-size: 13px; font-weight: 600; color: var(--text); overflow-wrap: break-word; }
+.pending-missing { font-size: 11.5px; color: var(--warn); margin-top: 2px; }
+
+/* Same collapse-behind-a-toggle pattern as Active/Closed Loans' Documents
+ * column (`.cell-toggle`, `.chev`, `.docs-expanded`) — duplicated here
+ * rather than shared globally since each page's surrounding layout differs
+ * (table cell vs. card row), same as the other two components already do. */
+.cell-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border-soft);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  flex: none;
+}
+.cell-toggle:hover { background: var(--surface-alt); color: var(--text); }
+.cell-toggle .chev { transition: transform 0.15s; flex: none; }
+.cell-toggle .chev.open { transform: rotate(180deg); }
+
+.docs-expanded {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1 1 100%;
+}

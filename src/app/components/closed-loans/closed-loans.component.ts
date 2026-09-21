@@ -7,6 +7,7 @@ import { TableModule } from 'primeng/table';
 import { SelectModule } from 'primeng/select';
 import { InputTextModule } from 'primeng/inputtext';
 import { InputNumberModule } from 'primeng/inputnumber';
+import { DatePickerModule } from 'primeng/datepicker';
 import { Menu, MenuModule } from 'primeng/menu';
 import { MenuItem } from 'primeng/api';
 import { DataService } from '../../services/data.service';
@@ -28,7 +29,10 @@ interface EditableClosed {
   settledAmount: number;
   amountPaid: number;
   balanceRemaining: number;
-  datePaid: string | null;
+  /** A real Date for the date-picker to bind to — converted to/from the
+   *  model's plain "YYYY-MM-DD" string at the add/save boundary (see
+   *  toIsoDate/fromIsoDate below). */
+  datePaid: Date | null;
   source: string;
   remarks: string;
 }
@@ -47,6 +51,7 @@ interface EditableClosed {
     InputTextModule,
     InputNumberModule,
     MenuModule,
+    DatePickerModule,
   ],
   templateUrl: './closed-loans.component.html',
   styleUrl: './closed-loans.component.scss',
@@ -173,6 +178,28 @@ export class ClosedLoansComponent {
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
   }
 
+  /** Date -> the model's plain "YYYY-MM-DD" string, using the picker's
+   *  local-calendar date (not toISOString(), which can shift a day across
+   *  UTC midnight depending on timezone). */
+  private toIsoDate(d: Date | null): string | null {
+    if (!d) return null;
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  /** The model's "YYYY-MM-DD" string -> a Date for the picker. Older records
+   *  may hold freeform text here from before this had a real date picker —
+   *  those can't be parsed back with any confidence, so this leaves the
+   *  picker empty rather than guessing. */
+  private fromIsoDate(s: string | null | undefined): Date | null {
+    if (!s) return null;
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s.trim());
+    if (!match) return null;
+    return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  }
+
   startEdit(loan: ClosedLoan): void {
     this.editingId.set(loan.id);
     this.editForm.set({
@@ -182,7 +209,7 @@ export class ClosedLoansComponent {
       settledAmount: loan.settledAmount,
       amountPaid: loan.amountPaid,
       balanceRemaining: loan.balanceRemaining,
-      datePaid: loan.datePaid,
+      datePaid: this.fromIsoDate(loan.datePaid),
       source: loan.source,
       remarks: loan.remarks,
     });
@@ -196,7 +223,7 @@ export class ClosedLoansComponent {
   saveEdit(id: string): void {
     const form = this.editForm();
     if (!form) return;
-    this.data.updateClosedLoan(id, { ...form });
+    this.data.updateClosedLoan(id, { ...form, datePaid: this.toIsoDate(form.datePaid) });
     this.cancelEdit();
   }
 
@@ -226,7 +253,7 @@ export class ClosedLoansComponent {
       settledAmount: paid,
       amountPaid: paid,
       balanceRemaining: 0,
-      datePaid: form.datePaid?.trim() || null,
+      datePaid: this.toIsoDate(form.datePaid),
       source: 'Added in app',
       remarks: '',
       order: this.data.closed().length,

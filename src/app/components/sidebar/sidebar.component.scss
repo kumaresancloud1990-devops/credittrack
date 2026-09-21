@@ -94,6 +94,11 @@
 }
 .foot-note.error { color: var(--danger); }
 
+.db-section { display: flex; flex-direction: column; gap: 6px; }
+.db-label { font-size: 10.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-faint); }
+.db-actions { display: flex; gap: 8px; }
+.db-btn { flex: 1 1 0; }
+
 .signout-link {
   border: none;
   background: transparent;

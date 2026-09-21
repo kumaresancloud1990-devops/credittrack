@@ -36,7 +36,7 @@
       </div>
       <div class="field">
         <label>Planned EMI start date (optional)</label>
-        <input pInputText type="date" [(ngModel)]="newLoan().plannedEmiStartDate" />
+        <p-datepicker [(ngModel)]="newLoan().plannedEmiStartDate" [showIcon]="true" iconDisplay="input" dateFormat="yy-mm-dd" [showButtonBar]="true" appendTo="body"></p-datepicker>
       </div>
     </div>
     <button pButton type="button" label="Add loan" (click)="addLoan()"></button>
@@ -68,6 +68,7 @@
             <th class="num">Outstanding</th>
             <th class="num">Balance</th>
             <th class="num">EMI</th>
+            <th class="emi-end-col">EMI ends</th>
             <th class="status-col">Status</th>
             <th class="remarks-col">Remarks</th>
             @if (catHasDocs(group.category)) { <th class="docs-col">Documents</th> }
@@ -79,13 +80,25 @@
             <tr class="edit-row">
               <td class="name"><input pInputText type="text" [(ngModel)]="form.name" /></td>
               <td class="num"><p-inputNumber [(ngModel)]="form.totalAmount" [useGrouping]="false"></p-inputNumber></td>
-              <td class="num"><p-inputNumber [(ngModel)]="form.totalOutstanding" [useGrouping]="false"></p-inputNumber></td>
+              <td class="num">
+                <p-inputNumber [(ngModel)]="form.totalOutstanding" [useGrouping]="false" title="Only used when there's no EMI + start date to auto-calculate outstanding from"></p-inputNumber>
+              </td>
               <td class="num"><p-inputNumber [(ngModel)]="form.balance" [useGrouping]="false"></p-inputNumber></td>
               <td class="num emi-edit-cell">
                 <p-inputNumber [(ngModel)]="form.emi" [useGrouping]="false" placeholder="EMI"></p-inputNumber>
                 <p-inputNumber [(ngModel)]="form.emiTenureMonths" [useGrouping]="false" placeholder="Tenure (mo)" title="Total number of EMIs — e.g. 24 for a 24-month chit"></p-inputNumber>
-                <input pInputText type="date" [(ngModel)]="form.plannedEmiStartDate" title="Planned EMI start date" />
+                <p-datepicker
+                  [(ngModel)]="form.plannedEmiStartDate"
+                  [showIcon]="true"
+                  iconDisplay="input"
+                  dateFormat="yy-mm-dd"
+                  [showButtonBar]="true"
+                  appendTo="body"
+                  placeholder="Start date"
+                  title="Planned EMI start date"
+                ></p-datepicker>
               </td>
+              <td class="emi-end-cell">{{ emiEndLabel(loan) }}</td>
               <td>
                 <p-select [options]="statusOptionsFor(loan.category)" optionLabel="label" optionValue="value" [(ngModel)]="form.status"></p-select>
               </td>
@@ -102,12 +115,16 @@
                 @if (loan.progress) { <div class="remark-note">{{ loan.progress }}</div> }
               </td>
               <td class="num money">{{ fmtMoney(loan.totalAmount) }}</td>
-              <td class="num money">{{ fmtMoney(loan.totalOutstanding) }}</td>
+              <td class="num money">
+                {{ fmtMoney(effectiveOutstanding(loan)) }}
+                @if (isOutstandingEstimated(loan)) { <div class="remark-note" title="Estimated from the EMI schedule, not manually entered">auto</div> }
+              </td>
               <td class="num money">{{ fmtMoney(loan.balance) }}</td>
               <td class="num money">
                 {{ loan.emi ? fmtMoney(loan.emi) : '—' }}
-                @if (emiPayoffLabel(loan)) { <div class="remark-note">{{ emiPayoffLabel(loan) }}</div> }
+                @if (emiTenureLabel(loan)) { <div class="remark-note">{{ emiTenureLabel(loan) }}</div> }
               </td>
+              <td class="emi-end-cell">{{ emiEndLabel(loan) }}</td>
               <td><p-tag [value]="statusLabel(loan)" [severity]="statusSeverity(loan.status)"></p-tag></td>
               <td class="remarks-cell">
                 @if (loan.remarks) {

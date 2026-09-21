@@ -28,7 +28,7 @@
       </div>
       <div class="field">
         <label>Date paid</label>
-        <input pInputText type="text" [(ngModel)]="newClosed().datePaid" placeholder="e.g. 2026-09-13" />
+        <p-datepicker [(ngModel)]="newClosed().datePaid" [showIcon]="true" iconDisplay="input" dateFormat="yy-mm-dd" [showButtonBar]="true" appendTo="body"></p-datepicker>
       </div>
     </div>
     <button pButton type="button" label="Add" (click)="addClosed()"></button>
@@ -75,7 +75,17 @@
               <td class="num"><p-inputNumber [(ngModel)]="form.settledAmount" [useGrouping]="false"></p-inputNumber></td>
               <td class="num"><p-inputNumber [(ngModel)]="form.amountPaid" [useGrouping]="false"></p-inputNumber></td>
               <td class="num"></td>
-              <td><input pInputText type="text" [(ngModel)]="form.datePaid" /></td>
+              <td>
+                <p-datepicker
+                  [(ngModel)]="form.datePaid"
+                  [showIcon]="true"
+                  iconDisplay="input"
+                  dateFormat="yy-mm-dd"
+                  [showButtonBar]="true"
+                  appendTo="body"
+                  placeholder="Date paid"
+                ></p-datepicker>
+              </td>
               <td><input pInputText type="text" [(ngModel)]="form.source" /></td>
               <td><input pInputText type="text" [(ngModel)]="form.remarks" /></td>
               <td [attr.colspan]="catHasDocs(loan.category) ? 2 : 1" class="edit-actions">

@@ -41,6 +41,41 @@
       <div class="foot-note">{{ exportMessage() }}</div>
     }
 
+    <div class="db-section">
+      <div class="db-label">Database</div>
+      <div class="db-actions">
+        <button
+          pButton
+          type="button"
+          size="small"
+          [outlined]="true"
+          class="db-btn"
+          [loading]="backingUp()"
+          (click)="downloadBackup()"
+          icon="pi pi-download"
+          label="Backup"
+          title="Download a full backup of the database"
+        ></button>
+        <input #restoreFileInput type="file" accept=".dump,.sql,.backup" style="display: none" (change)="onRestoreFileChosen($event)" />
+        <button
+          pButton
+          type="button"
+          size="small"
+          [outlined]="true"
+          severity="danger"
+          class="db-btn"
+          [loading]="restoring()"
+          (click)="restoreFileInput.click()"
+          icon="pi pi-upload"
+          label="Restore"
+          title="Replace the database with a backup file"
+        ></button>
+      </div>
+      @if (dbMessage()) {
+        <div class="foot-note" [class.error]="dbMessageIsError()">{{ dbMessage() }}</div>
+      }
+    </div>
+
     <button type="button" class="signout-link" (click)="signOut()">Sign out / change passcode</button>
   </div>
 </aside>

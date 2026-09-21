@@ -1,6 +1,6 @@
 import { Injectable, computed, effect, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Loan, LoanCategory, LOAN_CATEGORIES, ClosedLoan } from '../models/loan.model';
+import { Loan, LoanCategory, LOAN_CATEGORIES, ClosedLoan, hasFormalDocuments } from '../models/loan.model';
 import { AppMeta, Income, SpendEntry, SpendMonth } from '../models/spend.model';
 import { DocumentKind, LoanDocument } from '../models/document.model';
 import { environment } from '../../environments/environment';
@@ -74,6 +74,12 @@ export class DataService {
   readonly sortedClosed = computed(() => [...this._closed()].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
 
   readonly totalActiveBalance = computed(() => this._loans().reduce((s, l) => s + (Number(l.balance) || 0), 0));
+  /** Same idea as totalActiveBalance, but built from effectiveOutstanding()
+   *  instead of the "Balance" field — this is what the Dashboard's totals
+   *  and charts use, so they auto-tick down with the EMI schedule the same
+   *  way Active Loans' own "Outstanding" column does, instead of only
+   *  moving when you manually apply a Monthly Spends payment. */
+  readonly totalActiveOutstanding = computed(() => this._loans().reduce((s, l) => s + this.effectiveOutstanding(l), 0));
   readonly totalClosedPaid = computed(() => this._closed().reduce((s, c) => s + (Number(c.amountPaid) || 0), 0));
   readonly totalEmiPerMonth = computed(() => this._loans().reduce((s, l) => s + (Number(l.emi) || 0), 0));
   readonly totalFamilyCredit = computed(() =>
@@ -85,10 +91,88 @@ export class DataService {
     const m: Record<string, number> = {};
     LOAN_CATEGORIES.forEach((c) => (m[c] = 0));
     this._loans().forEach((l) => {
-      m[l.category] = (m[l.category] || 0) + (Number(l.balance) || 0);
+      m[l.category] = (m[l.category] || 0) + this.effectiveOutstanding(l);
     });
     return m as Record<LoanCategory, number>;
   });
+
+  /** Closed loans whose category carries formal paperwork (Bank/App/Credit
+   *  Card loans — the informal categories like Individual/Magalir/Family
+   *  never had a settlement letter or NOC to begin with, so they're left
+   *  out here entirely). Used to scope the Dashboard's document-status card
+   *  to loans that could actually have something pending. */
+  readonly closedFormalDocsLoans = computed(() => this.sortedClosed().filter((c) => hasFormalDocuments(c.category)));
+
+  /** Of those, the ones still missing at least one of the two documents
+   *  (Settlement Letter or NOC Copy) — a partial upload still counts as
+   *  pending, since the loan's paperwork isn't complete until both are on
+   *  file. Surfaced on the Dashboard so a closed loan's documents don't get
+   *  forgotten once it's off the Active Loans list. */
+  readonly closedDocsPending = computed(() =>
+    this.closedFormalDocsLoans().filter((c) => !c.settlementLetter || !c.nocCopy)
+  );
+
+  /** Whether this loan has an explicit, user-entered EMI tenure (the
+   *  reliable source of truth) rather than a rough total÷EMI estimate. */
+  hasExplicitTenure(loan: Loan): boolean {
+    return !!loan.emiTenureMonths && loan.emiTenureMonths > 0;
+  }
+
+  /**
+   * EMI tenure in months. Uses the loan's own `emiTenureMonths` when it's
+   * been entered directly (a chit's fixed term, or any loan whose real
+   * repayment count is known) — that's the reliable number. Only when it's
+   * missing do we fall back to a rough total-amount ÷ EMI estimate, which
+   * can be wrong whenever the total repaid differs from the amount
+   * financed (interest, chit dividends, processing fees, rounding). Null
+   * when there's no EMI/amount to go on, or the loan is already closed.
+   * Shared here (not just on the Active Loans page) so every screen that
+   * projects an EMI schedule agrees on the same number.
+   */
+  effectiveTenureMonths(loan: Loan): number | null {
+    if (loan.status === 'closed') return null;
+    if (this.hasExplicitTenure(loan)) return Math.round(loan.emiTenureMonths as number);
+    const emi = Number(loan.emi) || 0;
+    const total = Number(loan.totalAmount) || 0;
+    if (!emi || !total) return null;
+    return Math.max(1, Math.ceil(total / emi));
+  }
+
+  /** Whole months elapsed from `startDate` to today — a month only counts
+   *  once its EMI due date (the same day-of-month as the start date) has
+   *  actually passed, not the moment the calendar month ticks over. */
+  private monthsElapsedSince(startDate: string): number {
+    const start = new Date(startDate + 'T00:00:00');
+    if (isNaN(start.getTime())) return 0;
+    const now = new Date();
+    let months = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
+    if (now.getDate() < start.getDate()) months -= 1;
+    return Math.max(0, months);
+  }
+
+  /**
+   * Outstanding balance for one loan: Total amount − (months elapsed since
+   * the planned EMI start date × EMI), assuming EMIs land on schedule —
+   * ticks down on its own as time passes, floored at 0 and capped once the
+   * full tenure has elapsed. Falls back to the manually-entered
+   * `totalOutstanding` field, then to `balance`, whenever there's no EMI +
+   * start date to compute a schedule from (e.g. a loan with no fixed EMI at
+   * all) — so this always returns a real number, never null, and every
+   * screen that sums it (Dashboard) or shows it per-row (Active Loans)
+   * agrees. This is a separate figure from `balance`, which only moves when
+   * a Monthly Spends payment is actually linked to the loan.
+   */
+  effectiveOutstanding(loan: Loan): number {
+    if (loan.plannedEmiStartDate && loan.emi) {
+      const elapsed = this.monthsElapsedSince(loan.plannedEmiStartDate);
+      const tenure = this.effectiveTenureMonths(loan);
+      const monthsPaid = tenure ? Math.min(elapsed, tenure) : elapsed;
+      const outstanding = (Number(loan.totalAmount) || 0) - monthsPaid * (Number(loan.emi) || 0);
+      return Math.max(0, outstanding);
+    }
+    if (loan.totalOutstanding !== null && loan.totalOutstanding !== undefined) return Number(loan.totalOutstanding) || 0;
+    return Number(loan.balance) || 0;
+  }
 
   readonly monthKeys = computed(() => Object.keys(this._spends()).sort());
 
@@ -124,15 +208,18 @@ export class DataService {
     type Suggestion = { id: string; kind: 'quick-win' | 'relief' | 'attention'; title: string; detail: string };
     const out: Suggestion[] = [];
 
-    // 1) Quick win — smallest remaining balance, closest to being fully paid off.
-    const byBalance = active.filter((l) => (Number(l.balance) || 0) > 0).sort((a, b) => (a.balance || 0) - (b.balance || 0));
+    // 1) Quick win — smallest remaining outstanding, closest to being fully paid off.
+    const byBalance = active
+      .map((l) => ({ l, outstanding: this.effectiveOutstanding(l) }))
+      .filter((x) => x.outstanding > 0)
+      .sort((a, b) => a.outstanding - b.outstanding);
     if (byBalance.length) {
-      const l = byBalance[0];
+      const { l, outstanding } = byBalance[0];
       out.push({
         id: l.id,
         kind: 'quick-win',
         title: `Close out "${l.name}" next`,
-        detail: `Only ${this.fmtShort(l.balance || 0)} left — the smallest balance of your ${active.length} open loan${active.length === 1 ? '' : 's'}, and the fastest one to clear.`,
+        detail: `Only ${this.fmtShort(outstanding)} left — the smallest outstanding balance of your ${active.length} open loan${active.length === 1 ? '' : 's'}, and the fastest one to clear.`,
       });
     }
 
@@ -149,17 +236,20 @@ export class DataService {
     }
 
     // 3) Needs a decision — loans stuck in "discussion" status, i.e. no agreed plan yet.
-    const discussing = active.filter((l) => l.status === 'discussion').sort((a, b) => (b.balance || 0) - (a.balance || 0));
+    const discussing = active
+      .map((l) => ({ l, outstanding: this.effectiveOutstanding(l) }))
+      .filter((x) => x.l.status === 'discussion')
+      .sort((a, b) => b.outstanding - a.outstanding);
     if (discussing.length) {
-      const l = discussing[0];
+      const { l, outstanding } = discussing[0];
       out.push({
         id: l.id,
         kind: 'attention',
         title: `"${l.name}" still needs a decision`,
         detail:
           discussing.length > 1
-            ? `In discussion with ${this.fmtShort(l.balance || 0)} outstanding — plus ${discussing.length - 1} more loan${discussing.length - 1 === 1 ? '' : 's'} awaiting a settlement plan.`
-            : `In discussion with ${this.fmtShort(l.balance || 0)} outstanding — worth agreeing a settlement plan to move this to "Settlement agreed".`,
+            ? `In discussion with ${this.fmtShort(outstanding)} outstanding — plus ${discussing.length - 1} more loan${discussing.length - 1 === 1 ? '' : 's'} awaiting a settlement plan.`
+            : `In discussion with ${this.fmtShort(outstanding)} outstanding — worth agreeing a settlement plan to move this to "Settlement agreed".`,
       });
     }
 
@@ -193,11 +283,14 @@ export class DataService {
   readonly loanReductionData = computed(() => {
     return this.sortedLoans()
       .filter((l) => l.status !== 'closed')
-      .map((l) => ({
-        name: l.name,
-        paid: Math.max(0, (Number(l.totalAmount) || 0) - (Number(l.balance) || 0)),
-        remaining: Number(l.balance) || 0,
-      }))
+      .map((l) => {
+        const remaining = this.effectiveOutstanding(l);
+        return {
+          name: l.name,
+          paid: Math.max(0, (Number(l.totalAmount) || 0) - remaining),
+          remaining,
+        };
+      })
       .sort((a, b) => b.paid + b.remaining - (a.paid + a.remaining))
       .slice(0, 10);
   });
@@ -211,7 +304,7 @@ export class DataService {
    * month combined, as a concrete "what a bit extra buys you" suggestion.
    */
   readonly payoffProjection = computed(() => {
-    const totalBalance = this.totalActiveBalance();
+    const totalBalance = this.totalActiveOutstanding();
     const totalEmi = this.totalEmiPerMonth();
     const empty = {
       totalBalance,
@@ -275,6 +368,7 @@ export class DataService {
         this._syncError.set(null);
         this._ready.set(true);
         this.loadingState = false;
+        this.ensureCurrentMonthEmiEntries();
       },
       error: (err: HttpErrorResponse) => {
         this.loadingState = false;
@@ -651,6 +745,58 @@ export class DataService {
   currentMonthId(): string {
     const d = new Date();
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  }
+
+  /** A sensible default due-date for an auto-added EMI entry: the same
+   *  day-of-month as the loan's planned start date, landed in `monthId`
+   *  (clamped to however many days that month actually has — e.g. day 31
+   *  in a 30-day month becomes the 30th). Falls back to the 1st when there's
+   *  no start date to go by. Just a starting guess — editable afterward. */
+  private dueDateInMonth(monthId: string, plannedStartDate: string | null): string {
+    const m = /^(\d{4})-(\d{2})$/.exec(monthId);
+    if (!m) return '';
+    const [, yStr, moStr] = m;
+    const month0 = Number(moStr) - 1;
+    let day = 1;
+    if (plannedStartDate) {
+      const sm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(plannedStartDate);
+      if (sm) day = Number(sm[3]);
+    }
+    const daysInMonth = new Date(Number(yStr), month0 + 1, 0).getDate();
+    day = Math.min(Math.max(1, day), daysInMonth);
+    return `${yStr}-${moStr}-${String(day).padStart(2, '0')}`;
+  }
+
+  /**
+   * Auto-adds this month's EMI as a Monthly Spends expense entry for every
+   * active loan that has one set — so you don't have to remember to log
+   * each loan's EMI by hand every month. Added UNPAID (`paidAmount: null`,
+   * `applied: false`) with the loan's own name, so nothing is ever assumed
+   * paid on its own — it just shows up ready for you to mark paid and
+   * "Apply to loan" once you've actually paid it, same as any manually
+   * typed entry. Safe to call every time state loads: it skips a loan
+   * whenever the current month already has an entry with that same name,
+   * so it never creates a duplicate.
+   */
+  private ensureCurrentMonthEmiEntries(): void {
+    const monthId = this.currentMonthId();
+    const month = this._spends()[monthId];
+    const existingNames = new Set((month?.entries || []).map((e) => e.name.trim().toLowerCase()));
+    const dueLoans = this._loans().filter((l) => l.status !== 'closed' && Number(l.emi) > 0);
+    for (const loan of dueLoans) {
+      const key = loan.name.trim().toLowerCase();
+      if (!key || existingNames.has(key)) continue;
+      existingNames.add(key);
+      this.addSpendEntry(monthId, {
+        name: loan.name,
+        date: this.dueDateInMonth(monthId, loan.plannedEmiStartDate),
+        amount: Number(loan.emi) || 0,
+        paidAmount: null,
+        type: 'expense',
+        remarks: 'Auto-added EMI',
+        applied: false,
+      });
+    }
   }
 
   // ============================================================

@@ -66,13 +66,14 @@
    internally; overriding that to `display: block` collapses that internal
    flex layout and truncates the label to almost nothing. */
 .income-row p-inputnumber, .income-add-row p-inputnumber,
-.form-grid p-select, .form-grid p-inputnumber {
+.form-grid p-select, .form-grid p-inputnumber, .form-grid p-datepicker {
   width: 100%;
   min-width: 70px;
 }
 ::ng-deep .income-row p-inputnumber .p-inputnumber-input,
 ::ng-deep .income-add-row p-inputnumber .p-inputnumber-input,
-::ng-deep .form-grid p-inputnumber .p-inputnumber-input {
+::ng-deep .form-grid p-inputnumber .p-inputnumber-input,
+::ng-deep .form-grid p-datepicker .p-datepicker-input {
   width: 100%;
 }
 
@@ -89,5 +90,8 @@
 .edit-row td { vertical-align: top; padding-top: 8px; padding-bottom: 8px; }
 .edit-row .name input { width: 100%; }
 .edit-row .name .edit-subfield { margin-top: 6px; }
-.edit-row p-select, .edit-row p-inputnumber { width: 100%; min-width: 90px; }
-::ng-deep .edit-row p-inputnumber .p-inputnumber-input { width: 100%; }
+.edit-row p-select, .edit-row p-inputnumber, .edit-row p-datepicker { width: 100%; min-width: 90px; }
+::ng-deep .edit-row p-inputnumber .p-inputnumber-input,
+::ng-deep .edit-row p-datepicker .p-datepicker-input {
+  width: 100%;
+}

@@ -11,6 +11,12 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const { spawn } = require('child_process');
+const { Client } = require('pg');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const crypto = require('crypto');
 const pool = require('./db/pool');
 
 const app = express();
@@ -658,6 +664,176 @@ app.post('/api/spend-months/:fromMonthId/clone-to/:toMonthId', async (req, res) 
   } finally {
     client.release();
   }
+});
+
+// ============================================================
+// Database backup / restore
+//
+// Both backup and restore connect as `credittrack_migrator` (DATABASE_URL —
+// already present in this container's env for `npm run migrate`, so no new
+// secret is needed), not the day-to-day `credittrack_app` role. Two reasons:
+//
+//   - Restore shells out to `pg_restore --clean --if-exists`, which needs
+//     DROP/CREATE rights `credittrack_app` deliberately doesn't have (see
+//     db/provision-roles.sql).
+//   - Backup shells out to `pg_dump` (custom format, schema `credittrack` only,
+//     so the migration-history table restores along with everything else).
+//     `credittrack_app` looks sufficient at first (SELECT on every table), but
+//     pg_dump also reads each sequence's current value, which needs SELECT
+//     on the *sequence* — credittrack_app only has USAGE there (provision-roles.sql
+//     grants USAGE, not SELECT, deliberately keeping it DML-only). Rather
+//     than widen credittrack_app's grants just for this, backup uses the role
+//     that already owns everything in the schema.
+//
+// Both binaries come from the `postgresql16-client` package installed in
+// this image (see server/Dockerfile) — matching the `postgres:16-alpine`
+// server so pg_dump/pg_restore's protocol version lines up.
+// ============================================================
+
+const PG_SCHEMA = 'credittrack';
+
+function parseConnectionString(connStr) {
+  const url = new URL(connStr);
+  return {
+    host: url.hostname,
+    port: url.port || '5432',
+    user: decodeURIComponent(url.username),
+    password: decodeURIComponent(url.password),
+    database: url.pathname.replace(/^\//, ''),
+  };
+}
+
+function pgEnv(password) {
+  const env = { ...process.env, PGPASSWORD: password };
+  // Mirrors db/pool.js's DATABASE_SSL flag: encrypt-but-don't-verify, the
+  // libpq equivalent of `rejectUnauthorized: false`.
+  if (String(process.env.DATABASE_SSL).toLowerCase() === 'true') {
+    env.PGSSLMODE = 'require';
+  }
+  return env;
+}
+
+// After `pg_restore --clean` drops and recreates every table (as
+// credittrack_migrator, since that's who's connected), the ALTER DEFAULT
+// PRIVILEGES rule from provision-roles.sql *should* already re-grant
+// credittrack_app its SELECT/INSERT/UPDATE/DELETE rights automatically — that
+// rule is a standing instruction on the role+schema, not tied to any one
+// table. This re-runs the same grants explicitly anyway, as a cheap,
+// idempotent safety net: a restore that "succeeds" but silently leaves the
+// running app unable to read its own data would be a nasty surprise.
+async function reapplyAppGrants(migratorConnStr) {
+  const client = new Client({ connectionString: migratorConnStr });
+  await client.connect();
+  try {
+    await client.query(`GRANT USAGE ON SCHEMA ${PG_SCHEMA} TO credittrack_app`);
+    await client.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA ${PG_SCHEMA} TO credittrack_app`);
+    await client.query(`GRANT USAGE ON ALL SEQUENCES IN SCHEMA ${PG_SCHEMA} TO credittrack_app`);
+    await client.query(
+      `ALTER DEFAULT PRIVILEGES FOR ROLE credittrack_migrator IN SCHEMA ${PG_SCHEMA} GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO credittrack_app`
+    );
+    await client.query(
+      `ALTER DEFAULT PRIVILEGES FOR ROLE credittrack_migrator IN SCHEMA ${PG_SCHEMA} GRANT USAGE ON SEQUENCES TO credittrack_app`
+    );
+  } finally {
+    await client.end();
+  }
+}
+
+app.get('/api/backup', async (req, res) => {
+  const connStr = process.env.DATABASE_URL;
+  if (!connStr) {
+    return res.status(500).json({ error: 'server_error', message: 'No migrator database connection configured — cannot back up.' });
+  }
+  const { host, port, user, password, database } = parseConnectionString(connStr);
+  const tmpFile = path.join(os.tmpdir(), `credittrack-backup-${crypto.randomUUID()}.dump`);
+
+  const dump = spawn(
+    'pg_dump',
+    ['-h', host, '-p', port, '-U', user, '-d', database, '-n', PG_SCHEMA, '-Fc', '--no-owner', '--no-privileges', '-f', tmpFile],
+    { env: pgEnv(password) }
+  );
+
+  let stderr = '';
+  dump.stderr.on('data', (d) => {
+    stderr += d.toString();
+  });
+  dump.on('error', (err) => {
+    console.error('pg_dump failed to start (is postgresql16-client installed in this image?):', err);
+    res.status(500).json({ error: 'server_error', message: 'Could not start the backup — see server logs.' });
+  });
+  dump.on('close', (code) => {
+    if (code !== 0) {
+      console.error(`pg_dump exited with code ${code}: ${stderr}`);
+      fs.promises.unlink(tmpFile).catch(() => {});
+      return res.status(500).json({ error: 'server_error', message: 'Backup failed — see server logs.' });
+    }
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    res.download(tmpFile, `credittrack_backup_${stamp}.dump`, (err) => {
+      fs.promises.unlink(tmpFile).catch(() => {});
+      if (err) console.error('Sending the backup file failed:', err);
+    });
+  });
+});
+
+app.post('/api/restore', express.raw({ type: 'application/octet-stream', limit: '200mb' }), async (req, res) => {
+  const migratorConnStr = process.env.DATABASE_URL;
+  if (!migratorConnStr) {
+    return res.status(500).json({ error: 'server_error', message: 'No migrator database connection configured — cannot restore.' });
+  }
+  if (!Buffer.isBuffer(req.body) || !req.body.length) {
+    return res.status(400).json({ error: 'bad_request', message: 'No backup file was received.' });
+  }
+
+  const { host, port, user, password, database } = parseConnectionString(migratorConnStr);
+  const tmpFile = path.join(os.tmpdir(), `credittrack-restore-${crypto.randomUUID()}.dump`);
+  try {
+    await fs.promises.writeFile(tmpFile, req.body);
+  } catch (err) {
+    console.error('Could not stage the uploaded backup for restore:', err);
+    return res.status(500).json({ error: 'server_error', message: 'Could not stage the uploaded file.' });
+  }
+
+  const restore = spawn(
+    'pg_restore',
+    [
+      '-h', host, '-p', port, '-U', user, '-d', database,
+      '--clean', '--if-exists', '--no-owner', '--no-privileges', '--single-transaction',
+      tmpFile,
+    ],
+    { env: pgEnv(password) }
+  );
+
+  let stderr = '';
+  restore.stderr.on('data', (d) => {
+    stderr += d.toString();
+  });
+  restore.on('error', (err) => {
+    fs.promises.unlink(tmpFile).catch(() => {});
+    console.error('pg_restore failed to start (is postgresql16-client installed in this image?):', err);
+    res.status(500).json({ error: 'server_error', message: 'Could not start the restore — see server logs.' });
+  });
+  restore.on('close', async (code) => {
+    fs.promises.unlink(tmpFile).catch(() => {});
+    if (code !== 0) {
+      console.error(`pg_restore exited with code ${code}: ${stderr}`);
+      // --single-transaction means a failure here rolled itself back —
+      // the database is unchanged, not half-restored.
+      return res.status(500).json({
+        error: 'server_error',
+        message: 'Restore failed and was rolled back — your existing data is untouched. See server logs for details.',
+      });
+    }
+    try {
+      await reapplyAppGrants(migratorConnStr);
+    } catch (grantErr) {
+      console.error('Restore succeeded but re-applying app-role grants failed:', grantErr);
+      return res.status(500).json({
+        error: 'server_error',
+        message: 'Restore finished, but a follow-up permissions step failed — restart the backend before using the app again.',
+      });
+    }
+    res.json({ status: 'ok', message: 'Database restored successfully.' });
+  });
 });
 
 // ============================================================

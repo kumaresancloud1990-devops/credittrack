@@ -7,6 +7,7 @@ import { TagModule } from 'primeng/tag';
 import { SelectModule } from 'primeng/select';
 import { InputTextModule } from 'primeng/inputtext';
 import { InputNumberModule } from 'primeng/inputnumber';
+import { DatePickerModule } from 'primeng/datepicker';
 import { Menu, MenuModule } from 'primeng/menu';
 import { TableModule } from 'primeng/table';
 import { MenuItem } from 'primeng/api';
@@ -30,7 +31,10 @@ interface EditableLoan {
   settledAmount: number | null;
   balance: number;
   emi: number | null;
-  plannedEmiStartDate: string | null;
+  /** A real Date for the date-picker to bind to — converted to/from the
+   *  model's plain "YYYY-MM-DD" string at the add/save boundary (see
+   *  toIsoDate/fromIsoDate below). */
+  plannedEmiStartDate: Date | null;
   emiTenureMonths: number | null;
   status: LoanStatus;
   progress: string;
@@ -52,6 +56,7 @@ interface EditableLoan {
     InputNumberModule,
     MenuModule,
     TableModule,
+    DatePickerModule,
   ],
   templateUrl: './active-loans.component.html',
   styleUrl: './active-loans.component.scss',
@@ -103,7 +108,9 @@ export class ActiveLoansComponent {
     const loans = this.data.sortedLoans();
     return LOAN_CATEGORIES.map((category) => {
       const items = loans.filter((l) => l.category === category);
-      const subtotal = items.reduce((s, l) => s + (Number(l.balance) || 0), 0);
+      // Same figure as the Outstanding column below (data.effectiveOutstanding),
+      // so a category's header total always agrees with its own rows.
+      const subtotal = items.reduce((s, l) => s + this.data.effectiveOutstanding(l), 0);
       return { category, loans: items, subtotal };
     }).filter((g) => g.loans.length > 0);
   });
@@ -123,6 +130,26 @@ export class ActiveLoansComponent {
       progress: '',
       remarks: '',
     };
+  }
+
+
+  /** Date -> the model's plain "YYYY-MM-DD" string, using the picker's
+   *  local-calendar date (not toISOString(), which can shift a day across
+   *  UTC midnight depending on timezone). */
+  private toIsoDate(d: Date | null): string | null {
+    if (!d) return null;
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  /** The model's "YYYY-MM-DD" string -> a Date for the picker. */
+  private fromIsoDate(s: string | null | undefined): Date | null {
+    if (!s) return null;
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s.trim());
+    if (!match) return null;
+    return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
   }
 
   fmtMoney(n: number | null | undefined): string {
@@ -211,46 +238,48 @@ export class ActiveLoansComponent {
     this.actionsMenuRef?.toggle(event);
   }
 
-  /** Whether this loan has an explicit, user-entered tenure (the reliable source of truth). */
-  private hasExplicitTenure(loan: Loan): boolean {
-    return !!loan.emiTenureMonths && loan.emiTenureMonths > 0;
-  }
-
-  /**
-   * EMI tenure in months. Uses the loan's own `emiTenureMonths` when it's
-   * been entered directly (a chit's fixed term, or any loan whose real
-   * repayment count is known) — that's the reliable number. Only when it's
-   * missing do we fall back to a rough total-amount ÷ EMI estimate, which
-   * can be wrong whenever the total repaid differs from the amount
-   * financed (interest, chit dividends, processing fees, rounding).
-   * Null when there's no EMI/amount to go on, or the loan is already closed.
-   */
-  effectiveTenureMonths(loan: Loan): number | null {
-    if (loan.status === 'closed') return null;
-    if (this.hasExplicitTenure(loan)) return Math.round(loan.emiTenureMonths as number);
-    const emi = Number(loan.emi) || 0;
-    const total = Number(loan.totalAmount) || 0;
-    if (!emi || !total) return null;
-    return Math.max(1, Math.ceil(total / emi));
-  }
-
-  /** The month the loan finishes, from its planned EMI start date plus its tenure. Null until a start date is set. */
+  /** The month the loan finishes, from its planned EMI start date plus its
+   *  tenure (data.effectiveTenureMonths — shared with the Dashboard so both
+   *  screens agree). Null until a start date is set. */
   emiCompletionDate(loan: Loan): Date | null {
-    const months = this.effectiveTenureMonths(loan);
+    const months = this.data.effectiveTenureMonths(loan);
     if (!months || !loan.plannedEmiStartDate) return null;
     const start = new Date(loan.plannedEmiStartDate + 'T00:00:00');
     if (isNaN(start.getTime())) return null;
     return new Date(start.getFullYear(), start.getMonth() + (months - 1), 1);
   }
 
-  /** Short "18 mo · Feb 2028" style label shown under the EMI amount. Flags an unconfirmed (estimated) tenure so it's never mistaken for a fact. */
-  emiPayoffLabel(loan: Loan): string {
-    const months = this.effectiveTenureMonths(loan);
+  /** Short "18 mo" / "~18 mo (est.)" tenure-only label shown under the EMI amount — the completion date itself now has its own "EMI ends" column (see emiEndLabel below), so this no longer needs to repeat it. */
+  emiTenureLabel(loan: Loan): string {
+    const months = this.data.effectiveTenureMonths(loan);
     if (!months) return '';
+    return this.data.hasExplicitTenure(loan) ? `${months} mo` : `~${months} mo (est.)`;
+  }
+
+  /** The "EMI ends" column: when the schedule finishes, as "Feb 2028" (or
+   *  "~Feb 2028" when the tenure itself is only an estimate). "—" when
+   *  there's no EMI/tenure to go on at all; a nudge to set the start date
+   *  when the tenure is known but there's nothing to count it from yet. */
+  emiEndLabel(loan: Loan): string {
+    const months = this.data.effectiveTenureMonths(loan);
+    if (!months) return '—';
     const completion = this.emiCompletionDate(loan);
-    const tenure = this.hasExplicitTenure(loan) ? `${months} mo` : `~${months} mo (est.)`;
-    if (!completion) return `${tenure} · set start date`;
-    return `${tenure} · done ${completion.toLocaleString('en-US', { month: 'short', year: 'numeric' })}`;
+    if (!completion) return 'Set start date';
+    const label = completion.toLocaleString('en-US', { month: 'short', year: 'numeric' });
+    return this.data.hasExplicitTenure(loan) ? label : `~${label}`;
+  }
+
+  /** Outstanding balance for display — data.effectiveOutstanding(), the
+   *  same figure the Dashboard now sums, so both screens always agree. */
+  effectiveOutstanding(loan: Loan): number {
+    return this.data.effectiveOutstanding(loan);
+  }
+
+  /** Whether the Outstanding cell is showing the auto-computed EMI-schedule
+   *  estimate rather than the manually-entered figure — shown as a small
+   *  "auto" hint so the two never look the same. */
+  isOutstandingEstimated(loan: Loan): boolean {
+    return !!loan.plannedEmiStartDate && !!loan.emi;
   }
 
   startEdit(loan: Loan): void {
@@ -263,7 +292,7 @@ export class ActiveLoansComponent {
       settledAmount: loan.settledAmount,
       balance: loan.balance,
       emi: loan.emi,
-      plannedEmiStartDate: loan.plannedEmiStartDate ?? null,
+      plannedEmiStartDate: this.fromIsoDate(loan.plannedEmiStartDate),
       emiTenureMonths: loan.emiTenureMonths ?? null,
       status: loan.status,
       progress: loan.progress,
@@ -279,7 +308,7 @@ export class ActiveLoansComponent {
   saveEdit(id: string): void {
     const form = this.editForm();
     if (!form) return;
-    this.data.updateLoan(id, { ...form });
+    this.data.updateLoan(id, { ...form, plannedEmiStartDate: this.toIsoDate(form.plannedEmiStartDate) });
     this.cancelEdit();
   }
 
@@ -315,7 +344,7 @@ export class ActiveLoansComponent {
       settledAmount: null,
       balance: Number(form.balance) || 0,
       emi: form.emi === null || (form.emi as unknown) === '' ? null : Number(form.emi),
-      plannedEmiStartDate: form.plannedEmiStartDate || null,
+      plannedEmiStartDate: this.toIsoDate(form.plannedEmiStartDate),
       emiTenureMonths: form.emiTenureMonths === null || (form.emiTenureMonths as unknown) === '' ? null : Number(form.emiTenureMonths),
       status: 'active',
       progress: '',

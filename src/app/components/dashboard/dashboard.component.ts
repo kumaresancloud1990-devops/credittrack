@@ -2,10 +2,13 @@ import { Component, computed, signal, ViewChild, ApplicationRef } from '@angular
 import { CommonModule } from '@angular/common';
 import { CardModule } from 'primeng/card';
 import { TableModule } from 'primeng/table';
+import { ButtonModule } from 'primeng/button';
 import { ChartModule, UIChart } from 'primeng/chart';
 import { DataService } from '../../services/data.service';
-import { LOAN_CATEGORIES, LoanCategory } from '../../models/loan.model';
+import { ClosedLoan, LOAN_CATEGORIES, LoanCategory } from '../../models/loan.model';
 import { categorySlug, CATEGORY_COLOR_VAR } from '../../models/category-colors';
+import { DocumentKind, LoanDocument } from '../../models/document.model';
+import { DocumentUploadComponent } from '../document-upload/document-upload.component';
 
 /** The light-theme chart palette, hardcoded — also used as the "always
  *  print in these colors" set below, not just as a fallback. */
@@ -85,7 +88,7 @@ function verticalGradient(colorHex: string) {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, CardModule, TableModule, ChartModule],
+  imports: [CommonModule, CardModule, TableModule, ButtonModule, ChartModule, DocumentUploadComponent],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss',
 })
@@ -294,6 +297,48 @@ export class DashboardComponent {
       return { name: c, value: v, pct: Math.max(2, Math.round((v / max) * 100)) };
     });
   });
+
+  // ============================================================
+  // Closed-loan document status — a click-to-expand card showing which
+  // closed Bank/App/Credit Card loans are still missing a Settlement
+  // Letter or NOC Copy, with the same upload widget Closed Loans itself
+  // uses, so it can be resolved right from the Dashboard.
+  // ============================================================
+
+  /** Whether the "Closed loan documents" card's expandable list is open. */
+  readonly docsPanelOpen = signal(false);
+
+  toggleDocsPanel(): void {
+    this.docsPanelOpen.update((v) => !v);
+  }
+
+  /** Which pending loans (by id) have their own upload widgets expanded. */
+  private readonly expandedPendingDocs = signal<ReadonlySet<string>>(new Set());
+
+  isPendingDocsExpanded(id: string): boolean {
+    return this.expandedPendingDocs().has(id);
+  }
+
+  togglePendingDocs(id: string): void {
+    this.expandedPendingDocs.update((set) => {
+      const next = new Set(set);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  /** "Settlement Letter, NOC Copy" / "NOC Copy" — whichever of the two this loan is still missing. */
+  missingDocLabels(loan: ClosedLoan): string {
+    const missing: string[] = [];
+    if (!loan.settlementLetter) missing.push('Settlement Letter');
+    if (!loan.nocCopy) missing.push('NOC Copy');
+    return missing.join(', ');
+  }
+
+  onDocUploaded(loanId: string, kind: DocumentKind, doc: LoanDocument): void {
+    this.data.attachClosedDocument(loanId, kind, doc);
+  }
 
   /** Builds the summary card data for an arbitrary month id, reading gracefully when there's no data yet. */
   monthCard(monthId: string) {

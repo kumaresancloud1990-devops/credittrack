@@ -15,6 +15,16 @@
       [label]="'Clone this month → ' + (nextMonthKey() || 'next month')"
       (click)="cloneToNextMonth()"
     ></button>
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      icon="pi pi-file-pdf"
+      [disabled]="!currentMonth() || exportingPdf()"
+      [label]="exportingPdf() ? 'Exporting…' : 'Export to PDF'"
+      (click)="exportPdf()"
+    ></button>
     <button pButton type="button" [disabled]="!currentMonth()" [label]="showAddEntry() ? 'Cancel' : '+ Add entry'" (click)="toggleAddEntry()"></button>
   </div>
 </header>
@@ -134,8 +144,12 @@
           <p-inputNumber [(ngModel)]="newEntry().paidAmount" [useGrouping]="false"></p-inputNumber>
         </div>
         <div class="field">
-          <label>Date / remark</label>
-          <input pInputText type="text" [(ngModel)]="newEntry().date" />
+          <label>Date</label>
+          <p-datepicker [(ngModel)]="newEntry().date" [showIcon]="true" iconDisplay="input" dateFormat="yy-mm-dd" [showButtonBar]="true" appendTo="body"></p-datepicker>
+        </div>
+        <div class="field">
+          <label>Remarks</label>
+          <input pInputText type="text" [(ngModel)]="newEntry().remarks" />
         </div>
       </div>
       <button pButton type="button" label="Add entry" (click)="addEntry()"></button>
@@ -164,7 +178,17 @@
               <tr class="edit-row">
                 <td class="name">
                   <input pInputText type="text" [(ngModel)]="editEntry().name" placeholder="Name" />
-                  <input pInputText type="text" [(ngModel)]="editEntry().date" placeholder="Date / remark" class="edit-subfield" />
+                  <p-datepicker
+                    [(ngModel)]="editEntry().date"
+                    [showIcon]="true"
+                    iconDisplay="input"
+                    dateFormat="yy-mm-dd"
+                    [showButtonBar]="true"
+                    appendTo="body"
+                    placeholder="Date"
+                    class="edit-subfield"
+                  ></p-datepicker>
+                  <input pInputText type="text" [(ngModel)]="editEntry().remarks" placeholder="Remarks" class="edit-subfield" />
                 </td>
                 <td><p-select [options]="entryTypeOptions" optionLabel="label" optionValue="value" [(ngModel)]="editEntry().type"></p-select></td>
                 <td class="num"><p-inputNumber [(ngModel)]="editEntry().amount" [useGrouping]="false"></p-inputNumber></td>

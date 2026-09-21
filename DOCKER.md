@@ -52,7 +52,7 @@ docker compose run --rm seed
   even if you skip it or run it twice; it's a no-op once the `loans` table
   already has rows.
 
-Now open **http://localhost:8080** in a browser. Enter the family passcode
+Now open **http://localhost:8081** in a browser. Enter the family passcode
 you set as `FAMILY_ACCESS_KEY` above.
 
 ## 3. Day-to-day
@@ -74,21 +74,22 @@ and everything in it — avoid that unless you really mean to start over.
 
 | Service  | Container port | Host port | What it's for |
 |----------|----------------|-----------|----------------|
-| frontend | 80             | 8080      | the app itself — open this in a browser |
-| backend  | 4000           | 4000      | direct API access, e.g. `http://localhost:4000/healthz` |
-| db       | 5432           | 5432      | `psql`/pgAdmin/backups from the host |
+| frontend | 80             | 8081      | the app itself — open this in a browser |
+| backend  | 4000           | 4001      | direct API access, e.g. `http://localhost:4001/healthz` |
+| db       | 5432           | 5433      | `psql`/pgAdmin/backups from the host |
 
-The frontend is on **8080**, not 80, so it doesn't collide with IIS or
-anything else already using port 80 on this machine. Change the left-hand
+The host ports are offset from the more obvious 8080/4000/5432 so this stack
+can run side by side with another CrediTrack (or the original Karna) Docker
+deployment on the same machine without port clashes. Change the left-hand
 side of the `ports:` mapping in `docker-compose.yml` (e.g. `'9090:80'`) if
-you'd rather use a different port.
+you'd rather use different numbers.
 
 ## 5. Google Drive sign-in
 
 Document uploads and the "also save to Drive" Excel export need the
 frontend's URL added to **Authorized JavaScript origins** in Google Cloud
 Console (APIs & Services → Credentials → your OAuth client) — add
-`http://localhost:8080` (or whatever host/port you actually open the app
+`http://localhost:8081` (or whatever host/port you actually open the app
 from, e.g. a LAN IP). This is the same OAuth client ID already baked into
 `src/environments/environment.prod.ts`; nothing else to configure.
 

@@ -8,6 +8,7 @@ import { GoogleDriveService } from '../../services/google-drive.service';
 import { ExcelService } from '../../services/excel.service';
 import { DataService } from '../../services/data.service';
 import { AuthService } from '../../services/auth.service';
+import { BackupService } from '../../services/backup.service';
 
 interface NavItem {
   path: string;
@@ -36,12 +37,17 @@ export class SidebarComponent {
   readonly signInError = signal<string | null>(null);
   readonly exporting = signal(false);
   readonly exportMessage = signal<string | null>(null);
+  readonly backingUp = signal(false);
+  readonly restoring = signal(false);
+  readonly dbMessage = signal<string | null>(null);
+  readonly dbMessageIsError = signal(false);
 
   constructor(
     public drive: GoogleDriveService,
     private excel: ExcelService,
     public data: DataService,
-    private auth: AuthService
+    private auth: AuthService,
+    private backup: BackupService
   ) {}
 
   signOut(): void {
@@ -83,6 +89,70 @@ export class SidebarComponent {
     } finally {
       this.exporting.set(false);
       setTimeout(() => this.exportMessage.set(null), 4000);
+    }
+  }
+
+  private showDbMessage(message: string, isError: boolean): void {
+    this.dbMessageIsError.set(isError);
+    this.dbMessage.set(message);
+  }
+
+  /** Downloads a full database backup (.dump). */
+  async downloadBackup(): Promise<void> {
+    this.backingUp.set(true);
+    this.showDbMessage('', false);
+    try {
+      await this.backup.downloadBackup();
+      this.showDbMessage('Backup downloaded.', false);
+    } catch (err) {
+      this.showDbMessage(err instanceof Error ? err.message : 'Backup failed.', true);
+    } finally {
+      this.backingUp.set(false);
+      setTimeout(() => this.dbMessage.set(null), 5000);
+    }
+  }
+
+  /** Triggered by the hidden file input behind the "Restore" button. Confirms
+   *  with the user (this permanently replaces everything), downloads an
+   *  automatic safety backup of what's currently there, then restores. */
+  async onRestoreFileChosen(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files && input.files[0];
+    input.value = ''; // allow picking the exact same file again later
+    if (!file) return;
+
+    const ok = confirm(
+      `Restore "${file.name}"?\n\n` +
+        `This will PERMANENTLY REPLACE every loan, closed loan, and monthly spend currently in the database with what's in this backup file. This cannot be undone from within the app.\n\n` +
+        `A safety backup of what's currently here will be downloaded to your device first, before anything is changed.\n\n` +
+        `Click OK to continue, or Cancel to stop.`
+    );
+    if (!ok) return;
+
+    this.restoring.set(true);
+    this.showDbMessage('Saving a safety backup of your current data…', false);
+    try {
+      await this.backup.downloadBackup();
+    } catch (err) {
+      this.showDbMessage(
+        'Could not save a safety backup, so the restore was NOT started — your data is untouched. ' +
+          (err instanceof Error ? err.message : ''),
+        true
+      );
+      this.restoring.set(false);
+      return;
+    }
+
+    this.showDbMessage('Restoring — do not close this tab…', false);
+    try {
+      await this.backup.restoreBackup(file);
+      this.showDbMessage('Restore complete. Reloading your data…', false);
+      this.data.retryConnection();
+    } catch (err) {
+      this.showDbMessage(err instanceof Error ? err.message : 'Restore failed.', true);
+    } finally {
+      this.restoring.set(false);
+      setTimeout(() => this.dbMessage.set(null), 8000);
     }
   }
 }

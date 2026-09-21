@@ -47,15 +47,17 @@
    width the table now overflows its wrapper instead of squishing, and
    `.table-wrap`'s existing `overflow-x: auto` turns that into a horizontal
    scrollbar, which is the correct fallback on a narrow viewport. */
-::ng-deep .table-wrap table { table-layout: fixed; min-width: 1050px; }
+::ng-deep .table-wrap table { table-layout: fixed; min-width: 1150px; }
 ::ng-deep .table-wrap th:first-child { width: auto; }
 ::ng-deep .table-wrap th.num { width: 100px; }
+::ng-deep .table-wrap th.emi-end-col { width: 100px; }
 ::ng-deep .table-wrap th.status-col { width: 116px; }
 ::ng-deep .table-wrap th.remarks-col { width: 170px; }
 ::ng-deep .table-wrap th.docs-col { width: 140px; }
 ::ng-deep .table-wrap th.actions-col { width: 40px; }
 
 .remark-note { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
+.emi-end-cell { font-size: 13px; }
 
 /* `max-width` on a <td> is only a hint under the table's default auto
    layout — browsers can still stretch the column to fit a long remark,
@@ -153,8 +155,8 @@
   width: 100%;
   min-width: 70px;
 }
-.edit-row p-select, .edit-row p-inputnumber,
-.form-grid p-select, .form-grid p-inputnumber {
+.edit-row p-select, .edit-row p-inputnumber, .edit-row p-datepicker,
+.form-grid p-select, .form-grid p-inputnumber, .form-grid p-datepicker {
   width: 100%;
   min-width: 70px;
 }
@@ -173,6 +175,8 @@
 /* p-inputnumber's own inner <input> doesn't stretch to its host's width by
    default — it needs telling explicitly. */
 ::ng-deep .form-grid p-inputnumber .p-inputnumber-input,
-::ng-deep .edit-row p-inputnumber .p-inputnumber-input {
+::ng-deep .edit-row p-inputnumber .p-inputnumber-input,
+::ng-deep .form-grid p-datepicker .p-datepicker-input,
+::ng-deep .edit-row p-datepicker .p-datepicker-input {
   width: 100%;
 }

@@ -140,13 +140,15 @@
   width: 100%;
   min-width: 70px;
 }
-.edit-row p-select, .edit-row p-inputnumber,
-.form-grid p-select, .form-grid p-inputnumber {
+.edit-row p-select, .edit-row p-inputnumber, .edit-row p-datepicker,
+.form-grid p-select, .form-grid p-inputnumber, .form-grid p-datepicker {
   width: 100%;
   min-width: 70px;
 }
 ::ng-deep .form-grid p-inputnumber .p-inputnumber-input,
-::ng-deep .edit-row p-inputnumber .p-inputnumber-input {
+::ng-deep .edit-row p-inputnumber .p-inputnumber-input,
+::ng-deep .form-grid p-datepicker .p-datepicker-input,
+::ng-deep .edit-row p-datepicker .p-datepicker-input {
   width: 100%;
 }
 .edit-actions { display: flex; gap: 6px; align-items: center; }

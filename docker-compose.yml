@@ -8,8 +8,13 @@
 #   2. docker compose up -d --build
 #   3. docker compose run --rm migrate      (first time only)
 #   4. docker compose run --rm seed         (first time only, optional)
-#   5. open http://localhost:8080
+#   5. open http://localhost:8081
 #
+# Host ports are offset from the defaults (8080/4000/5432) so this can run
+# side by side with another CrediTrack/Karna deployment on the same machine
+# without port clashes: frontend 8081, backend 4001, db 5433. These are only
+# the HOST-side numbers — containers still talk to each other internally on
+# 80/4000/5432, so nothing else in this file needed to change.
 name: credittrack
 
 services:
@@ -27,7 +32,7 @@ services:
       # server/db/init/01-provision-roles.sh.
       - ./server/db/init:/docker-entrypoint-initdb.d:ro
     ports:
-      - '5432:5432'
+      - '5433:5432'
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U postgres']
       interval: 5s
@@ -49,7 +54,7 @@ services:
       FAMILY_ACCESS_KEY: ${FAMILY_ACCESS_KEY:-change-me}
       PORT: 4000
     ports:
-      - '4000:4000'
+      - '4001:4000'
 
   # One-off jobs, not part of the normal `docker compose up`. Run by hand
   # (see DOCKER.md) after `db` is provisioned. `--profile tools` keeps them
@@ -87,7 +92,7 @@ services:
     depends_on:
       - backend
     ports:
-      - '8080:80'
+      - '8081:80'
 
 volumes:
   credittrack_pgdata:

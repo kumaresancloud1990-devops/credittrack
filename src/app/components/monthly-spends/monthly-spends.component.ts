@@ -9,7 +9,9 @@ import { MessageModule } from 'primeng/message';
 import { SelectModule } from 'primeng/select';
 import { InputTextModule } from 'primeng/inputtext';
 import { InputNumberModule } from 'primeng/inputnumber';
+import { DatePickerModule } from 'primeng/datepicker';
 import { DataService } from '../../services/data.service';
+import { PdfService } from '../../services/pdf.service';
 import { SpendEntry, SpendType } from '../../models/spend.model';
 
 interface NewEntryForm {
@@ -17,7 +19,11 @@ interface NewEntryForm {
   type: SpendType;
   amount: number;
   paidAmount: number | null;
-  date: string;
+  /** A real Date for the date-picker to bind to — converted to/from the
+   *  model's plain "YYYY-MM-DD" string at the add/save boundary (see
+   *  toIsoDate/fromIsoDate below). Kept separate from `remarks` now instead
+   *  of the old single freeform "Date / remark" text field. */
+  date: Date | null;
   remarks: string;
 }
 
@@ -40,6 +46,7 @@ interface NewIncomeForm {
     SelectModule,
     InputTextModule,
     InputNumberModule,
+    DatePickerModule,
   ],
   templateUrl: './monthly-spends.component.html',
   styleUrl: './monthly-spends.component.scss',
@@ -56,8 +63,9 @@ export class MonthlySpendsComponent {
   readonly editEntry = signal<NewEntryForm>(this.blankEntry());
   readonly cloneError = signal<string | null>(null);
   readonly cloning = signal(false);
+  readonly exportingPdf = signal(false);
 
-  constructor(public data: DataService) {
+  constructor(public data: DataService, private pdf: PdfService) {
     const keys = this.data.monthKeys();
     if (keys.length) {
       this.selectedMonth.set(keys[keys.length - 1]);
@@ -111,7 +119,30 @@ export class MonthlySpendsComponent {
   ];
 
   private blankEntry(): NewEntryForm {
-    return { name: '', type: 'expense', amount: 0, paidAmount: null, date: '', remarks: '' };
+    return { name: '', type: 'expense', amount: 0, paidAmount: null, date: null, remarks: '' };
+  }
+
+  /** Date -> the model's plain "YYYY-MM-DD" string, using the picker's
+   *  local-calendar date (not toISOString(), which can shift a day across
+   *  UTC midnight depending on timezone). */
+  private toIsoDate(d: Date | null): string {
+    if (!d) return '';
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  /** The model's "YYYY-MM-DD" string -> a Date for the picker. Entries
+   *  created before this field had a real date picker may hold freeform
+   *  text here instead (the old UI let you type anything into a combined
+   *  "Date / remark" box) — those can't be parsed back into a date with any
+   *  confidence, so this leaves the picker empty rather than guessing. */
+  private fromIsoDate(s: string | null | undefined): Date | null {
+    if (!s) return null;
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s.trim());
+    if (!match) return null;
+    return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
   }
 
   fmtMoney(n: number | null | undefined): string {
@@ -150,7 +181,7 @@ export class MonthlySpendsComponent {
       type: entry.type,
       amount: entry.amount,
       paidAmount: entry.paidAmount,
-      date: entry.date,
+      date: this.fromIsoDate(entry.date),
       remarks: entry.remarks,
     });
   }
@@ -170,7 +201,8 @@ export class MonthlySpendsComponent {
       type: form.type,
       amount: Number(form.amount) || 0,
       paidAmount: form.paidAmount === null || (form.paidAmount as unknown) === '' ? null : Number(form.paidAmount),
-      date: form.date.trim(),
+      date: this.toIsoDate(form.date),
+      remarks: form.remarks.trim(),
     });
     this.editingIndex.set(null);
   }
@@ -238,6 +270,17 @@ export class MonthlySpendsComponent {
     this.cloning.set(false);
   }
 
+  async exportPdf(): Promise<void> {
+    const key = this.currentMonth()?.key;
+    if (!key || this.exportingPdf()) return;
+    this.exportingPdf.set(true);
+    try {
+      await this.pdf.exportMonthAndDownload(key);
+    } finally {
+      this.exportingPdf.set(false);
+    }
+  }
+
   toggleAddEntry(): void {
     this.showAddEntry.update((v) => !v);
     this.newEntry.set(this.blankEntry());
@@ -251,7 +294,7 @@ export class MonthlySpendsComponent {
     if (!form.name.trim()) return;
     const entry: SpendEntry = {
       name: form.name.trim(),
-      date: form.date.trim(),
+      date: this.toIsoDate(form.date),
       amount: Number(form.amount) || 0,
       paidAmount: form.paidAmount === null || (form.paidAmount as unknown) === '' ? null : Number(form.paidAmount),
       type: form.type,
