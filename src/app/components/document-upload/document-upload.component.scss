@@ -9,6 +9,17 @@
    preview dialog instead of a new Google Drive tab, so it needs the usual
    button resets (border/background/font/cursor) on top of the same visual
    treatment the old link had. */
+/* Wraps the document-name button and the small download icon next to it,
+ * so the two stay on one line when there's room and the name still has
+ * somewhere to truncate to instead of pushing the icon out of view. */
+.doc-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+}
+
 .doc-link {
   display: inline-flex;
   align-items: center;
@@ -16,6 +27,7 @@
   font-size: 12px;
   color: var(--accent);
   text-decoration: none;
+  min-width: 0;
   max-width: 170px;
   border: none;
   background: none;
@@ -30,6 +42,28 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* A small icon-only button for downloading the document without first
+ * opening the preview dialog — same download action the dialog's own
+ * footer link triggers (see .drive-fallback-link below), just reachable
+ * in one click from the collapsed row. */
+.doc-download-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+  font-size: 12px;
+}
+.doc-download-btn:hover { background: var(--surface-alt); color: var(--accent); }
+.doc-download-btn:disabled { cursor: default; opacity: 0.6; }
 
 .btn.small { cursor: pointer; }
 .reupload { font-size: 11px; padding: 3px 8px; }
@@ -68,6 +102,17 @@
   margin: 0 auto;
   display: block;
 }
+/* Groups "Open in Drive" and "Download" on the left side of the dialog
+ * footer, with Close (a direct sibling, styled by PrimeNG) pushed to the
+ * right by the footer's own space-between below. */
+.footer-links {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+/* Also used as a <button> (the Download action) alongside the <a> (Open in
+ * Drive) — the button-only resets here (border/background/font/cursor)
+ * layer on top of the same link-like visual treatment both share. */
 .drive-fallback-link {
   display: inline-flex;
   align-items: center;
@@ -75,9 +120,14 @@
   font-size: 12.5px;
   color: var(--accent);
   text-decoration: none;
-  margin-right: auto;
+  border: none;
+  background: none;
+  padding: 0;
+  font-family: inherit;
+  cursor: pointer;
 }
 .drive-fallback-link:hover { text-decoration: underline; }
+.drive-fallback-link:disabled { cursor: default; opacity: 0.6; text-decoration: none; }
 ::ng-deep .p-dialog-footer {
   display: flex;
   align-items: center;

@@ -22,6 +22,15 @@ export class GoogleDriveService {
   private tokenClient: TokenClient | null = null;
   private expiryTimer: ReturnType<typeof setTimeout> | null = null;
   private folderId: string | null = null;
+  /** Per-loan subfolder ids, keyed by the loan's (trimmed) name — looked up
+   *  or created the first time a document is uploaded for that loan, then
+   *  reused for the rest of this session so uploading both the Settlement
+   *  Letter and NOC Copy for one loan doesn't search Drive twice. Not
+   *  persisted anywhere (unlike the single shared app-folder id below,
+   *  which is cached on the backend via `data.setDriveFolderId`) — there's
+   *  no per-loan storage for it, and re-deriving it from the loan's own
+   *  name on the next page load is cheap and always self-consistent. */
+  private readonly loanFolderIds = new Map<string, string>();
 
   constructor(private data: DataService) {}
 
@@ -167,6 +176,54 @@ export class GoogleDriveService {
     return createJson.id;
   }
 
+  /**
+   * Ensures a subfolder named after this loan exists inside the shared app
+   * folder, and returns its Drive folder id — creating it the first time a
+   * document is uploaded for that loan. Every document for a loan
+   * (Settlement Letter, NOC Copy) then lands together in that one
+   * loan-named subfolder instead of one flat pile shared by every loan, so
+   * Drive's own folder structure mirrors the app's loan-by-loan records.
+   * Looked up by name (scoped to the app folder as parent, same as
+   * `ensureAppFolder` looks up the app folder itself by name) rather than a
+   * stored id, so renaming a loan later simply finds-or-creates the
+   * matching folder next time instead of leaving documents in a
+   * now-mismatched name.
+   */
+  async ensureLoanFolder(loanName: string): Promise<string> {
+    const safeName = (loanName || '').trim() || 'Untitled loan';
+    const cached = this.loanFolderIds.get(safeName);
+    if (cached) return cached;
+
+    const parentId = await this.ensureAppFolder();
+    const query = encodeURIComponent(
+      `name='${safeName.replace(/'/g, "\\'")}' and mimeType='application/vnd.google-apps.folder' and trashed=false and '${parentId}' in parents`
+    );
+    const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}&fields=files(id,name)`, {
+      headers: this.authHeaders(),
+    });
+    if (!searchRes.ok) {
+      throw new Error(await this.describeDriveError(searchRes));
+    }
+    const searchJson = await searchRes.json();
+    const existing = searchJson.files?.[0];
+    if (existing?.id) {
+      this.loanFolderIds.set(safeName, existing.id);
+      return existing.id;
+    }
+
+    const createRes = await fetch('https://www.googleapis.com/drive/v3/files?fields=id', {
+      method: 'POST',
+      headers: { ...this.authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: safeName, mimeType: 'application/vnd.google-apps.folder', parents: [parentId] }),
+    });
+    if (!createRes.ok) {
+      throw new Error(await this.describeDriveError(createRes));
+    }
+    const createJson = await createRes.json();
+    this.loanFolderIds.set(safeName, createJson.id);
+    return createJson.id;
+  }
+
   async uploadFile(file: File | Blob, fileName: string, mimeType: string, folderId: string): Promise<{ id: string; webViewLink: string }> {
     const metadata = { name: fileName, parents: [folderId] };
     const form = new FormData();
@@ -194,7 +251,7 @@ export class GoogleDriveService {
     if (!this._isSignedIn()) {
       throw new Error('Please sign in with Google first (see the sidebar) before uploading documents.');
     }
-    const folderId = await this.ensureAppFolder();
+    const folderId = await this.ensureLoanFolder(loanName);
     const ext = file.name.includes('.') ? file.name.slice(file.name.lastIndexOf('.')) : '';
     const fileName = `${loanName} - ${DOCUMENT_LABELS[kind]}${ext}`;
     const mimeType = file.type || 'application/octet-stream';

@@ -38,6 +38,7 @@ export class DocumentUploadComponent {
   @Output() uploaded = new EventEmitter<LoanDocument>();
 
   readonly uploading = signal(false);
+  readonly downloading = signal(false);
   readonly error = signal<string | null>(null);
   readonly labels = DOCUMENT_LABELS;
 
@@ -76,6 +77,40 @@ export class DocumentUploadComponent {
     } finally {
       this.uploading.set(false);
       input.value = '';
+    }
+  }
+
+  /**
+   * Downloads this document's actual bytes to the user's computer, saved
+   * under the exact same name shown in the app (`existingDoc.fileName` —
+   * "<loan name> - <Settlement Letter|NOC Copy>.<ext>") rather than
+   * whatever name a browser might otherwise guess from the URL. Reuses the
+   * same authenticated fetch as the in-app preview, so it works the same
+   * way regardless of which Google account (if any) is active elsewhere in
+   * the browser.
+   */
+  async downloadDocument(): Promise<void> {
+    const doc = this.existingDoc;
+    if (!doc) return;
+    this.error.set(null);
+    this.downloading.set(true);
+    try {
+      if (!this.drive.isSignedIn()) {
+        await this.drive.signIn();
+      }
+      const blob = await this.drive.fetchFileBlob(doc.driveFileId);
+      const objectUrl = URL.createObjectURL(blob);
+      const link = window.document.createElement('a');
+      link.href = objectUrl;
+      link.download = doc.fileName;
+      window.document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch (err) {
+      this.error.set(err instanceof Error ? err.message : 'Could not download this document.');
+    } finally {
+      this.downloading.set(false);
     }
   }
 

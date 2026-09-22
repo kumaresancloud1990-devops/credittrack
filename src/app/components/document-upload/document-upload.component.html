@@ -7,10 +7,22 @@
      PrimeNG theme (credittrack-preset.ts) is built from. -->
 <div class="doc-upload">
   @if (existingDoc) {
-    <button type="button" class="doc-link" (click)="openPreview()">
-      <i class="pi pi-file" style="font-size: 12px"></i>
-      <span class="doc-name">{{ existingDoc.fileName }}</span>
-    </button>
+    <div class="doc-row">
+      <button type="button" class="doc-link" (click)="openPreview()">
+        <i class="pi pi-file" style="font-size: 12px"></i>
+        <span class="doc-name">{{ existingDoc.fileName }}</span>
+      </button>
+      <button
+        type="button"
+        class="doc-download-btn"
+        (click)="downloadDocument()"
+        [disabled]="downloading()"
+        [title]="'Download ' + existingDoc.fileName"
+        [attr.aria-label]="'Download ' + existingDoc.fileName"
+      >
+        <i class="pi" [class.pi-download]="!downloading()" [class.pi-spin]="downloading()" [class.pi-spinner]="downloading()"></i>
+      </button>
+    </div>
     <label class="btn small reupload">
       {{ uploading() ? 'Uploading…' : 'Replace' }}
       <input type="file" accept=".pdf,.jpg,.jpeg,.png" (change)="onFileSelected($event)" [disabled]="uploading()" hidden />
@@ -57,11 +69,18 @@
     }
   </div>
   <ng-template pTemplate="footer">
-    @if (existingDoc?.driveViewLink) {
-      <a [href]="existingDoc!.driveViewLink" target="_blank" rel="noopener" class="drive-fallback-link">
-        Open in Drive <i class="pi pi-external-link" style="font-size: 11px"></i>
-      </a>
-    }
+    <div class="footer-links">
+      @if (existingDoc?.driveViewLink) {
+        <a [href]="existingDoc!.driveViewLink" target="_blank" rel="noopener" class="drive-fallback-link">
+          Open in Drive <i class="pi pi-external-link" style="font-size: 11px"></i>
+        </a>
+      }
+      @if (existingDoc) {
+        <button type="button" class="drive-fallback-link" [disabled]="downloading()" (click)="downloadDocument()">
+          {{ downloading() ? 'Downloading…' : 'Download' }} <i class="pi pi-download" style="font-size: 11px"></i>
+        </button>
+      }
+    </div>
     <button pButton type="button" severity="secondary" [outlined]="true" size="small" label="Close" (click)="closePreview()"></button>
   </ng-template>
 </p-dialog>
