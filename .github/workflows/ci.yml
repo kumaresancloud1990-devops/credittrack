@@ -1,0 +1,47 @@
+name: CI
+
+# Runs the Angular build and the unit test suite on every push and pull
+# request. This exists because two tests (app.component.spec.ts) had been
+# silently failing for months with no CI to catch it — nothing enforced
+# that `ng test` was ever actually run before a change landed. Build and
+# test are two separate jobs so a build failure and a test failure show up
+# as two distinct red X's instead of one job stopping at whichever step
+# failed first and hiding the other.
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['**']
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - run: npm ci
+      - run: npm run build
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - run: npm ci
+      # --watch=false: exit after one run instead of staying open, which is
+      # what a local `ng test` does by default for interactive use.
+      # --browsers=ChromeHeadlessCI: a custom launcher in karma.conf.js
+      # (plain ChromeHeadless refuses to start when run as root, which some
+      # CI environments do) — ubuntu-latest ships Chrome preinstalled, so
+      # this needs no extra setup step.
+      - run: npx ng test --watch=false --browsers=ChromeHeadlessCI
