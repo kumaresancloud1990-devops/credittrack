@@ -1,5 +1,5 @@
 import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { DialogModule } from 'primeng/dialog';
 import { ButtonModule } from 'primeng/button';
@@ -23,11 +23,10 @@ function guessKind(doc: LoanDocument): PreviewKind {
 }
 
 @Component({
-  selector: 'app-document-upload',
-  standalone: true,
-  imports: [CommonModule, DialogModule, ButtonModule],
-  templateUrl: './document-upload.component.html',
-  styleUrl: './document-upload.component.scss',
+    selector: 'app-document-upload',
+    imports: [DialogModule, ButtonModule],
+    templateUrl: './document-upload.component.html',
+    styleUrl: './document-upload.component.scss'
 })
 export class DocumentUploadComponent {
   @Input({ required: true }) loanId!: string;

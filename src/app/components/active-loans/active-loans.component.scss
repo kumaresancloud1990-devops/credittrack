@@ -35,29 +35,62 @@
    take up a bit more or less room depending on whether a category also has
    a Documents column. Widths are set on the header <th> cells only —
    table-layout: fixed derives the whole column's width from its first row. */
-/* table-layout: fixed derives every column's width from the header row, but
-   the table itself is still capped at 100% of its container (styles.scss
-   sets `table { width: 100%; }` globally). If the sum of the fixed column
-   widths below is close to or larger than the space actually available —
-   a narrower browser window, a smaller laptop screen — the browser has no
-   room to honor them and instead squeezes every column, including the
-   auto-width Name column, proportionally smaller, which is what wraps short
-   names onto two lines. Giving the table an explicit min-width equal to the
-   fixed columns' total (plus headroom for Name) stops that: below this
-   width the table now overflows its wrapper instead of squishing, and
-   `.table-wrap`'s existing `overflow-x: auto` turns that into a horizontal
-   scrollbar, which is the correct fallback on a narrow viewport. */
-::ng-deep .table-wrap table { table-layout: fixed; min-width: 1150px; }
-::ng-deep .table-wrap th:first-child { width: auto; }
-::ng-deep .table-wrap th.num { width: 100px; }
-::ng-deep .table-wrap th.emi-end-col { width: 100px; }
-::ng-deep .table-wrap th.status-col { width: 116px; }
-::ng-deep .table-wrap th.remarks-col { width: 170px; }
-::ng-deep .table-wrap th.docs-col { width: 140px; }
-::ng-deep .table-wrap th.actions-col { width: 40px; }
+/* Widths are percentages of the table's own width (which is always 100% of
+   its container, set globally in styles.scss), not fixed pixels — a first
+   attempt at removing the horizontal drag-scrollbar just deleted a fixed
+   `min-width` and left these as px, which made table-layout: fixed try to
+   shrink every column including the auto-width Name column when space ran
+   short; browsers don't split that deficit evenly, so Name collapsed to
+   almost nothing (a name like "Pocketlly" wrapping one word per line) while
+   the numeric columns barely moved. Percentages that sum to 100% remove the
+   ambiguity entirely: every column, Name included, is always exactly that
+   share of whatever width is actually available, so the table fits any
+   screen with no scrollbar and no single column collapsing — it shrinks (or
+   grows) in proportion with everything else. These keep the exact same
+   relative proportions the old pixel widths had (each is that column's old
+   px value ÷ the old 1150px total). */
+::ng-deep .table-wrap table { table-layout: fixed; }
+::ng-deep .table-wrap th:first-child { width: 15%; }
+::ng-deep .table-wrap th.num { width: 8%; }
+/* Wider than its "num" siblings (Total/Outstanding/Balance) — in edit mode
+   this column stacks three inputs (EMI, tenure, start-date-with-icon), and
+   the start-date field needs more than 8%'s worth of room to show
+   "2025-01" and its calendar icon without clipping. Same specificity as
+   `th.num` above, so it must come after it in the stylesheet to win. */
+::ng-deep .table-wrap th.emi-col { width: 10%; }
+::ng-deep .table-wrap th.last-paid-col { width: 9%; }
+::ng-deep .table-wrap th.emi-end-col { width: 8%; }
+::ng-deep .table-wrap th.status-col { width: 9%; }
+::ng-deep .table-wrap th.remarks-col { width: 10%; }
+::ng-deep .table-wrap th.docs-col { width: 11%; }
+::ng-deep .table-wrap th.actions-col { width: 3.5%; }
 
 .remark-note { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
-.emi-end-cell { font-size: 13px; }
+.emi-end-cell, .last-paid-cell { font-size: 13px; white-space: nowrap; }
+
+/* This loan's own "X/Y paid" + "Z pending" — projected from its own start
+   date and tenure (component.emiProgress), not a category rollup. Two
+   short stacked lines, not one long one, so each fits inside the narrow
+   EMI column on its own instead of overflowing into "Last paid" next to
+   it. The pending line keeps a warm/amber tone for "still owed"; the paid
+   line stays neutral like the plain tenure text (.remark-note) it replaces
+   when a real schedule is available. */
+.emi-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-top: 2px;
+  font-size: 11px;
+}
+.emi-progress .emi-paid { color: var(--text-faint); }
+.emi-progress .emi-pending {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-weight: 600;
+  color: var(--warn);
+}
+.emi-progress .pi { font-size: 10px; }
 
 /* `max-width` on a <td> is only a hint under the table's default auto
    layout — browsers can still stretch the column to fit a long remark,
@@ -65,8 +98,13 @@
    width on this inner block (a normal block box, not a table cell) is
    what actually holds the column steady. */
 .remarks-cell { white-space: normal; }
+/* max-width: 100% (not a fixed px value) so this always matches its
+   actual table cell — the Remarks column is now a percentage of the
+   table's width (see table-layout note above), so a fixed 170px cap would
+   overflow a narrower cell on a smaller screen instead of truncating
+   inside it. */
 .remarks-text {
-  max-width: 170px;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -160,11 +198,16 @@
   width: 100%;
   min-width: 70px;
 }
+/* No min-width here — with the EMI column now competing for space against
+   a "Last paid" column too, a wrapper min-width wider than the column's own
+   declared share would force it to bleed into the cell next to it. Each
+   stacked input's own 70px min-width (the same floor every other edit-row
+   input already uses, see `.edit-row p-inputnumber` above) is a low enough
+   floor to actually fit the column instead. */
 .emi-edit-cell {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  min-width: 140px;
 }
 .edit-actions {
   display: flex;

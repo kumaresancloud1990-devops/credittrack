@@ -67,7 +67,8 @@
             <th class="num">Total</th>
             <th class="num">Outstanding</th>
             <th class="num">Balance</th>
-            <th class="num">EMI</th>
+            <th class="num emi-col">EMI</th>
+            <th class="last-paid-col">Last paid</th>
             <th class="emi-end-col">EMI ends</th>
             <th class="status-col">Status</th>
             <th class="remarks-col">Remarks</th>
@@ -98,6 +99,7 @@
                   title="Planned EMI start date"
                 ></p-datepicker>
               </td>
+              <td class="last-paid-cell">{{ lastPaidLabel(loan) }}</td>
               <td class="emi-end-cell">{{ emiEndLabel(loan) }}</td>
               <td>
                 <p-select [options]="statusOptionsFor(loan.category)" optionLabel="label" optionValue="value" [(ngModel)]="form.status"></p-select>
@@ -110,10 +112,7 @@
             </tr>
           } @else {
             <tr>
-              <td class="name">
-                {{ loan.name }}
-                @if (loan.progress) { <div class="remark-note">{{ loan.progress }}</div> }
-              </td>
+              <td class="name">{{ loan.name }}</td>
               <td class="num money">{{ fmtMoney(loan.totalAmount) }}</td>
               <td class="num money">
                 {{ fmtMoney(effectiveOutstanding(loan)) }}
@@ -122,8 +121,16 @@
               <td class="num money">{{ fmtMoney(loan.balance) }}</td>
               <td class="num money">
                 {{ loan.emi ? fmtMoney(loan.emi) : '—' }}
-                @if (emiTenureLabel(loan)) { <div class="remark-note">{{ emiTenureLabel(loan) }}</div> }
+                @if (emiProgress(loan); as progress) {
+                  <div class="emi-progress">
+                    <span class="emi-paid">{{ progress.paidLabel }}</span>
+                    <span class="emi-pending"><i class="pi pi-clock"></i>{{ progress.pendingLabel }}</span>
+                  </div>
+                } @else if (emiTenureLabel(loan)) {
+                  <div class="remark-note">{{ emiTenureLabel(loan) }}</div>
+                }
               </td>
+              <td class="last-paid-cell">{{ lastPaidLabel(loan) }}</td>
               <td class="emi-end-cell">{{ emiEndLabel(loan) }}</td>
               <td><p-tag [value]="statusLabel(loan)" [severity]="statusSeverity(loan.status)"></p-tag></td>
               <td class="remarks-cell">
@@ -178,7 +185,7 @@
             <td class="num"></td>
             <td class="num"></td>
             <td class="num money">{{ fmtMoney(group.subtotal) }}</td>
-            <td [attr.colspan]="catHasDocs(group.category) ? 5 : 4"></td>
+            <td [attr.colspan]="catHasDocs(group.category) ? 6 : 5"></td>
           </tr>
         </ng-template>
       </p-table>

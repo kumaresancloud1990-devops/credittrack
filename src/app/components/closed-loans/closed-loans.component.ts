@@ -1,5 +1,5 @@
 import { Component, ViewChild, computed, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
@@ -38,10 +38,8 @@ interface EditableClosed {
 }
 
 @Component({
-  selector: 'app-closed-loans',
-  standalone: true,
-  imports: [
-    CommonModule,
+    selector: 'app-closed-loans',
+    imports: [
     FormsModule,
     DocumentUploadComponent,
     ButtonModule,
@@ -51,10 +49,10 @@ interface EditableClosed {
     InputTextModule,
     InputNumberModule,
     MenuModule,
-    DatePickerModule,
-  ],
-  templateUrl: './closed-loans.component.html',
-  styleUrl: './closed-loans.component.scss',
+    DatePickerModule
+],
+    templateUrl: './closed-loans.component.html',
+    styleUrl: './closed-loans.component.scss'
 })
 export class ClosedLoansComponent {
   catSlug(category: string): string {

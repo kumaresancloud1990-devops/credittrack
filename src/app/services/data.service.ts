@@ -174,6 +174,50 @@ export class DataService {
     return Number(loan.balance) || 0;
   }
 
+  /** How many EMI installments have actually come due so far, and how many
+   *  are still ahead — projected purely from the loan's own start date and
+   *  tenure, the same schedule effectiveOutstanding() already uses. Null
+   *  once there's no live schedule to project (no EMI, no start date, no
+   *  tenure, or the loan is closed), so the caller can fall back to a plain
+   *  tenure label instead. */
+  pendingEmiInstallments(loan: Loan): { paid: number; pending: number; tenure: number } | null {
+    if (loan.status === 'closed') return null;
+    if (!loan.plannedEmiStartDate || !loan.emi) return null;
+    const tenure = this.effectiveTenureMonths(loan);
+    if (!tenure) return null;
+    const elapsed = this.monthsElapsedSince(loan.plannedEmiStartDate);
+    const paid = Math.min(elapsed, tenure);
+    return { paid, pending: Math.max(0, tenure - paid), tenure };
+  }
+
+  /** The due date of the most recent EMI installment actually paid so far
+   *  — the Nth paid installment's own due date is `start + N months`
+   *  (matching how monthsElapsedSince itself counts a month as elapsed only
+   *  once its due date has passed), not `start + (N-1) months`. Null when
+   *  nothing has been paid yet, or there's no live schedule to project from. */
+  lastPaidEmiDate(loan: Loan): Date | null {
+    if (loan.status === 'closed') return null;
+    if (!loan.plannedEmiStartDate || !loan.emi) return null;
+    const tenure = this.effectiveTenureMonths(loan);
+    if (!tenure) return null;
+    const elapsed = this.monthsElapsedSince(loan.plannedEmiStartDate);
+    const paid = Math.min(elapsed, tenure);
+    if (paid < 1) return null;
+    const start = new Date(loan.plannedEmiStartDate + 'T00:00:00');
+    if (isNaN(start.getTime())) return null;
+    return new Date(start.getFullYear(), start.getMonth() + paid, start.getDate());
+  }
+
+  /** Whether a loan's planned EMI schedule has actually begun by the given
+   *  "YYYY-MM" month — a loan with no start date yet is treated as already
+   *  started (nothing to gate on), so it isn't silently skipped. Used to
+   *  keep ensureCurrentMonthEmiEntries from auto-adding an EMI entry for a
+   *  loan whose first installment hasn't come due yet. */
+  private hasEmiStartedByMonth(loan: Loan, monthId: string): boolean {
+    if (!loan.plannedEmiStartDate) return true;
+    return loan.plannedEmiStartDate.slice(0, 7) <= monthId;
+  }
+
   readonly monthKeys = computed(() => Object.keys(this._spends()).sort());
 
   readonly lastLoggedMonth = computed<string | null>(() => {
@@ -715,18 +759,25 @@ export class DataService {
       });
   }
 
-  /** Finds the best active-loan match for a free-text spend entry name (case-insensitive substring match). */
+  /** Finds the best active-loan match for a free-text spend entry name.
+   *  Exact match (case/whitespace-insensitive) always wins first — only
+   *  when nothing matches exactly does a full-name substring match kick in
+   *  as a fallback. A "first word" heuristic used to sit here instead, but
+   *  it couldn't tell apart loans that share a first word (e.g. "Magalir
+   *  Loan-1/2/3" all start with "magalir"), so it always matched whichever
+   *  same-prefix loan happened to sort first, regardless of which one an
+   *  entry was actually named after. */
   findLoanByName(name: string): Loan | null {
-    const n = String(name).toLowerCase();
-    let best: Loan | null = null;
-    this.sortedLoans().forEach((l) => {
-      if (l.status === 'closed') return;
-      const ln = l.name.toLowerCase();
-      if (ln === n || ln.includes(n) || n.includes(ln.split(' ')[0])) {
-        if (!best) best = l;
-      }
+    const n = String(name).trim().toLowerCase();
+    if (!n) return null;
+    const candidates = this.sortedLoans().filter((l) => l.status !== 'closed');
+    const exact = candidates.find((l) => l.name.trim().toLowerCase() === n);
+    if (exact) return exact;
+    const contains = candidates.find((l) => {
+      const ln = l.name.trim().toLowerCase();
+      return ln.includes(n) || n.includes(ln);
     });
-    return best;
+    return contains ?? null;
   }
 
   /** Applies a spend entry's paid amount to the matching loan's balance, and marks the entry applied. */
@@ -782,7 +833,14 @@ export class DataService {
     const monthId = this.currentMonthId();
     const month = this._spends()[monthId];
     const existingNames = new Set((month?.entries || []).map((e) => e.name.trim().toLowerCase()));
-    const dueLoans = this._loans().filter((l) => l.status !== 'closed' && Number(l.emi) > 0);
+    // Only a loan that's actually active (not "discussion"/"settlement")
+    // AND whose planned EMI start date has actually arrived should get an
+    // auto-added entry — otherwise a loan still being negotiated, or one
+    // that doesn't start until a future month, ends up with a phantom EMI
+    // due this month.
+    const dueLoans = this._loans().filter(
+      (l) => l.status === 'active' && Number(l.emi) > 0 && this.hasEmiStartedByMonth(l, monthId)
+    );
     for (const loan of dueLoans) {
       const key = loan.name.trim().toLowerCase();
       if (!key || existingNames.has(key)) continue;

@@ -29,17 +29,33 @@
    overrides on top of PrimeNG's button classes fought with its own
    styling instead of complementing it. */
 
-.summary-card {
+/* `.summary-card` used to be a flex row itself (justify-content:
+   space-between, align-items: flex-end) from when it held a second element
+   next to the stats — now that `.ms-stats` is its only child,
+   "space-between" has nothing to distribute space between, so that single
+   child just sat wherever PrimeNG's own `.p-card-body`/`.p-card-content`
+   wrapper's default alignment pushed it, not centered. `.ms-stats` now does
+   its own full-width centering instead of depending on its ancestors' flex
+   behavior. */
+.summary-card { margin-bottom: 18px; }
+.ms-stats {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  gap: 16px;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 32px;
   flex-wrap: wrap;
-  margin-bottom: 18px;
+  width: 100%;
 }
-.ms-stats { display: flex; gap: 22px; flex-wrap: wrap; }
-.ms-stat { display: flex; flex-direction: column; gap: 4px; font-size: 11.5px; color: var(--text-muted); }
-.ms-stat b { font-size: 15px; color: var(--text); }
+.ms-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+}
+.ms-stat b { font-size: 19px; color: var(--text); }
 
 .income-card { margin-bottom: 18px; }
 .income-card h3 { margin-bottom: 12px; }
@@ -83,6 +99,24 @@
   color: var(--danger);
   font-size: 13px;
   margin-bottom: 16px;
+}
+
+/* Same shape as .error-banner, tinted with the accent colour instead of
+   danger — used for the "saved to downloads, attach it yourself" message
+   after Export / Share PDF falls back to a plain download, which isn't an
+   error and shouldn't read as one. */
+.info-banner {
+  border-color: var(--accent-soft);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+.whatsapp-web-link {
+  color: var(--accent-strong);
+  font-weight: 600;
+  text-decoration: underline;
+  margin: 0 3px;
 }
 
 .remark-note { font-size: 11px; color: var(--text-faint); margin-top: 2px; }

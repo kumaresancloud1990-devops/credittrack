@@ -1,5 +1,5 @@
 import { Component, ViewChild, computed, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
@@ -42,10 +42,8 @@ interface EditableLoan {
 }
 
 @Component({
-  selector: 'app-active-loans',
-  standalone: true,
-  imports: [
-    CommonModule,
+    selector: 'app-active-loans',
+    imports: [
     FormsModule,
     DocumentUploadComponent,
     ButtonModule,
@@ -56,10 +54,10 @@ interface EditableLoan {
     InputNumberModule,
     MenuModule,
     TableModule,
-    DatePickerModule,
-  ],
-  templateUrl: './active-loans.component.html',
-  styleUrl: './active-loans.component.scss',
+    DatePickerModule
+],
+    templateUrl: './active-loans.component.html',
+    styleUrl: './active-loans.component.scss'
 })
 export class ActiveLoansComponent {
   catSlug(category: string): string {
@@ -254,6 +252,29 @@ export class ActiveLoansComponent {
     const months = this.data.effectiveTenureMonths(loan);
     if (!months) return '';
     return this.data.hasExplicitTenure(loan) ? `${months} mo` : `~${months} mo (est.)`;
+  }
+
+  /** This loan's own "X/Y paid" + "Z pending" EMI progress, projected from
+   *  its own start date and tenure — per loan, not a category rollup, so
+   *  two loans in the same category never get confused for one another.
+   *  Falls back to null (caller shows the plain tenure label instead) once
+   *  there's no live schedule to project. */
+  emiProgress(loan: Loan): { paidLabel: string; pendingLabel: string } | null {
+    const progress = this.data.pendingEmiInstallments(loan);
+    if (!progress) return null;
+    return {
+      paidLabel: `${progress.paid}/${progress.tenure} paid`,
+      pendingLabel: `${progress.pending} pending`,
+    };
+  }
+
+  /** "Last paid" column: the due date of the most recent EMI installment
+   *  actually paid so far, from the loan's own schedule. "—" once there's
+   *  nothing paid yet (or no live schedule to project from at all). */
+  lastPaidLabel(loan: Loan): string {
+    const d = this.data.lastPaidEmiDate(loan);
+    if (!d) return '—';
+    return d.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
   }
 
   /** The "EMI ends" column: when the schedule finishes, as "Feb 2028" (or

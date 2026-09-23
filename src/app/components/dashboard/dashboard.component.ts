@@ -86,11 +86,10 @@ function verticalGradient(colorHex: string) {
 }
 
 @Component({
-  selector: 'app-dashboard',
-  standalone: true,
-  imports: [CommonModule, CardModule, TableModule, ButtonModule, ChartModule, DocumentUploadComponent],
-  templateUrl: './dashboard.component.html',
-  styleUrl: './dashboard.component.scss',
+    selector: 'app-dashboard',
+    imports: [CommonModule, CardModule, TableModule, ButtonModule, ChartModule, DocumentUploadComponent],
+    templateUrl: './dashboard.component.html',
+    styleUrl: './dashboard.component.scss'
 })
 export class DashboardComponent {
   readonly categories = LOAN_CATEGORIES;

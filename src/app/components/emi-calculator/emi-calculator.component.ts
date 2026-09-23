@@ -1,5 +1,5 @@
 import { Component, computed, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
@@ -16,11 +16,10 @@ interface EmiResult {
 }
 
 @Component({
-  selector: 'app-emi-calculator',
-  standalone: true,
-  imports: [CommonModule, FormsModule, ButtonModule, CardModule, InputNumberModule],
-  templateUrl: './emi-calculator.component.html',
-  styleUrl: './emi-calculator.component.scss',
+    selector: 'app-emi-calculator',
+    imports: [FormsModule, ButtonModule, CardModule, InputNumberModule],
+    templateUrl: './emi-calculator.component.html',
+    styleUrl: './emi-calculator.component.scss'
 })
 export class EmiCalculatorComponent {
   readonly principal = signal(100000);

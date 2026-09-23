@@ -1,5 +1,5 @@
 import { Component, computed, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
@@ -33,10 +33,8 @@ interface NewIncomeForm {
 }
 
 @Component({
-  selector: 'app-monthly-spends',
-  standalone: true,
-  imports: [
-    CommonModule,
+    selector: 'app-monthly-spends',
+    imports: [
     FormsModule,
     ButtonModule,
     CardModule,
@@ -46,10 +44,10 @@ interface NewIncomeForm {
     SelectModule,
     InputTextModule,
     InputNumberModule,
-    DatePickerModule,
-  ],
-  templateUrl: './monthly-spends.component.html',
-  styleUrl: './monthly-spends.component.scss',
+    DatePickerModule
+],
+    templateUrl: './monthly-spends.component.html',
+    styleUrl: './monthly-spends.component.scss'
 })
 export class MonthlySpendsComponent {
   readonly selectedMonth = signal<string | null>(null);
@@ -64,6 +62,7 @@ export class MonthlySpendsComponent {
   readonly cloneError = signal<string | null>(null);
   readonly cloning = signal(false);
   readonly exportingPdf = signal(false);
+  readonly pdfExportMessage = signal<string | null>(null);
 
   constructor(public data: DataService, private pdf: PdfService) {
     const keys = this.data.monthKeys();
@@ -274,8 +273,17 @@ export class MonthlySpendsComponent {
     const key = this.currentMonth()?.key;
     if (!key || this.exportingPdf()) return;
     this.exportingPdf.set(true);
+    this.pdfExportMessage.set(null);
     try {
+      // Straight to a plain download — no native-share-panel attempt first.
+      // That path reliably failed for WhatsApp on Windows desktop (WhatsApp's
+      // Windows app isn't a registered system share target, so the OS panel
+      // had nothing to offer and just showed its own error), so it's not
+      // worth the extra step and a broken-looking dialog flashing up first.
+      // A straightforward download plus a WhatsApp Web link to finish the
+      // job by hand is the reliable path on this setup.
       await this.pdf.exportMonthAndDownload(key);
+      this.pdfExportMessage.set('Saved to your downloads folder.');
     } finally {
       this.exportingPdf.set(false);
     }

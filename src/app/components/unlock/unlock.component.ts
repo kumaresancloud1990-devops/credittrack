@@ -1,14 +1,13 @@
 import { Component, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
 
 @Component({
-  selector: 'app-unlock',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './unlock.component.html',
-  styleUrl: './unlock.component.scss',
+    selector: 'app-unlock',
+    imports: [FormsModule],
+    templateUrl: './unlock.component.html',
+    styleUrl: './unlock.component.scss'
 })
 export class UnlockComponent {
   readonly passcode = signal('');
