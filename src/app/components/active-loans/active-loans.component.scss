@@ -63,7 +63,12 @@
 ::ng-deep .table-wrap th.status-col { width: 9%; }
 ::ng-deep .table-wrap th.remarks-col { width: 10%; }
 ::ng-deep .table-wrap th.docs-col { width: 11%; }
-::ng-deep .table-wrap th.actions-col { width: 3.5%; }
+/* Fixed px, not a percentage like its neighbours — this column only ever
+   holds one constant-size 32px icon button, so a percentage that shrinks
+   with the table (3.5% of a narrow table can be under 20px) forces the
+   button to spill outside its own cell no matter how it's positioned. 44px
+   always leaves it comfortable room, on any table width. */
+::ng-deep .table-wrap th.actions-col { width: 44px; position: sticky; right: 0; background: var(--surface); }
 
 .remark-note { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
 .emi-end-cell, .last-paid-cell { font-size: 13px; white-space: nowrap; }
@@ -173,7 +178,22 @@
   min-width: 150px;
 }
 
-.row-actions { text-align: right; }
+/* On a narrow window or a category with a long Remarks value, this table
+   can still need to scroll horizontally (table-layout: fixed columns don't
+   shrink infinitely) — but the row's Edit/Mark closed/Delete menu should
+   never be something the user has to go hunting for with a scrollbar.
+   Pinning the actions column to the right edge of `.table-wrap`'s own
+   scroll area keeps it on-screen at all times; the background + left
+   border/shadow give it a visible seam so it doesn't look like it's just
+   floating over whatever cell content is scrolled underneath it. */
+.row-actions {
+  text-align: right;
+  position: sticky;
+  right: 0;
+  background: var(--surface);
+  box-shadow: -6px 0 6px -6px rgba(0, 0, 0, 0.15);
+}
+tbody tr:hover td.row-actions { background: var(--surface-alt); }
 
 /* PrimeNG's p-menu (in the component, appendTo="body") replaces the old
    hand-rolled fixed-position dropdown, so it's no longer rendered nested in
