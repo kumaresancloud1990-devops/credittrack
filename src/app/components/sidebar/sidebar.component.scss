@@ -46,37 +46,42 @@
 .nav {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
+/* Flatter, more compact nav row than the old bold pill — closer to the
+   angular-tailwind reference's sidebar, which marks the current page with
+   a soft tinted background and coloured text/icon rather than a solid
+   filled button. Letter-spacing + semi-bold on the label reads a little
+   more "app chrome", a little less "body text", matching that reference's
+   text-xs font-semibold tracking-wide nav labels. */
 .nav-btn {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 6px 11px 6px 6px;
+  gap: 12px;
+  padding: 8px 12px 8px 8px;
   border-radius: var(--radius-sm);
   color: var(--text-muted);
   text-decoration: none;
-  font-size: 13.5px;
-  font-weight: 500;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
   transition: background 0.15s, color 0.15s;
 }
 .nav-btn:hover { background: var(--surface-alt); color: var(--text); }
-/* A solid filled pill for the active page, rather than the earlier soft
-   tint — reads as a firmer, more deliberate "you are here" than a faint
-   background shift. The icon chip loses its own background when active
-   (below) so the icon sits directly on the pill instead of doubling up
-   two blocks of the same accent colour. */
-.nav-btn.active { background: var(--accent); color: var(--accent-contrast); }
+.nav-btn.active { background: var(--accent-soft); color: var(--accent-strong); }
 
+/* No icon-box background any more — the tinted row background (above)
+   already carries the "active" signal, so a second tinted box behind the
+   icon just doubled up the same colour. The icon now simply inherits the
+   row's text colour, muted when idle and accent-coloured when active. */
 .nav-chip {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: var(--surface-alt);
-  color: var(--text-muted);
+  width: 26px;
+  height: 26px;
+  color: var(--text-faint);
 }
-.nav-chip svg { width: 15px; height: 15px; }
-.nav-btn.active .nav-chip { background: transparent; color: var(--accent-contrast); }
+.nav-chip svg { width: 16px; height: 16px; }
+.nav-btn:hover .nav-chip { color: var(--text-muted); }
+.nav-btn.active .nav-chip { color: var(--accent-strong); }
 
 .sidebar-foot {
   margin-top: auto;
@@ -88,16 +93,17 @@
 }
 .export-btn { width: 100%; }
 .drive-status { display: flex; }
-.foot-note {
-  font-size: 11px;
-  color: var(--text-faint);
-}
-.foot-note.error { color: var(--danger); }
 
 .db-section { display: flex; flex-direction: column; gap: 6px; }
 .db-label { font-size: 10.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-faint); }
 .db-actions { display: flex; gap: 8px; }
 .db-btn { flex: 1 1 0; }
+
+.foot-note {
+  font-size: 11px;
+  color: var(--text-faint);
+}
+.foot-note.error { color: var(--danger); }
 
 .signout-link {
   border: none;

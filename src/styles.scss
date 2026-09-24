@@ -1,35 +1,46 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&display=swap');
 @import "primeicons/primeicons.css";
+@tailwind components;
+@tailwind utilities;
 
 /* ============================================================
    CrediTrack — global design tokens
+
+   Reskinned to the cleaner, flatter card style of
+   github.com/lannodev/angular-tailwind (hairline borders instead of bold
+   blue-gray ones, cooler neutral grays, crisper status colors, Poppins
+   headings) while keeping Karna's own brand blue as --accent — this is a
+   visual reskin only, the token NAMES and every component that consumes
+   them via var(--x) are unchanged, so no markup or logic needed to change
+   for the new look to take effect everywhere at once.
    ============================================================ */
 
 :root {
-  --bg: #F2F5FB;
+  /* "Cool slate" page background — a cooler, more neutral gray-blue than
+     the previous near-white tint, closer to Tailwind's slate palette.
+     Cards (--surface) stay pure white so they still read as clearly
+     "lifted" off the page instead of blending into it. */
+  --bg: #EEF1F6;
   --surface: #FFFFFF;
-  --surface-alt: #E8EFFB;
+  --surface-alt: #E6EAF1;
   --surface-raise: #FFFFFF;
-  --border: #6B87C3;
-  --border-soft: #A5BBE6;
-  /* Darkened from the original #152341/#334166/#455680 — those washed out
-     against the light card/background colours, especially the muted/faint
-     tiers used for stat labels, subtitles and table headers. These are
-     noticeably darker so every text tier reads clearly at a glance. */
+  --border: #D7DEEA;
+  --border-soft: #E4E9F2;
   --text: #0E1830;
-  --text-muted: #26314F;
-  --text-faint: #3C4A6B;
+  --text-muted: #566180;
+  --text-faint: #7C88A3;
   --accent: #1D56C7;
   --accent-strong: #143E96;
-  --accent-soft: #E2EBFC;
+  --accent-soft: #E7EFFC;
   --accent-contrast: #FFFFFF;
   --brass: #3B72D9;
   --brass-soft: #E6EEFC;
-  --good: #287A4B;
-  --good-soft: #E1F3E7;
-  --warn: #8D6621;
-  --warn-soft: #FAF0DC;
-  --danger: #AA4D38;
-  --danger-soft: #F8E7E0;
+  --good: #15803D;
+  --good-soft: #E3F6EA;
+  --warn: #B45309;
+  --warn-soft: #FDF1DE;
+  --danger: #DC2626;
+  --danger-soft: #FDECEC;
 
   /* One distinct accent per loan category, used for category headers, dots
      and dashboard bars so sections are recognizable by colour, not just by
@@ -41,83 +52,85 @@
   --cat-magalir: #8D6621;
   --cat-family: #A63E6B;
 
-  --radius: 14px;
+  --radius: 12px;
   --radius-sm: 8px;
-  --shadow-sm: 0 1px 2px rgba(21, 35, 65, 0.06), 0 1px 1px rgba(21, 35, 65, 0.04);
-  --shadow-md: 0 4px 14px rgba(21, 35, 65, 0.08), 0 1px 3px rgba(21, 35, 65, 0.06);
-  --font-head: "Fraunces", Georgia, serif;
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05), 0 1px 1px rgba(15, 23, 42, 0.03);
+  --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.04);
+  --font-head: "Poppins", "Fraunces", Georgia, serif;
   --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0B1526;
-    --surface: #111E36;
-    --surface-alt: #15233F;
-    --surface-raise: #16233F;
-    --border: #4A62A0;
-    --border-soft: #2E4470;
+    /* Same "cool slate" shift as light mode — less blue-saturated than the
+       previous navy-black palette, closer to a neutral dark gray-blue. */
+    --bg: #10151B;
+    --surface: #171D25;
+    --surface-alt: #1D242D;
+    --surface-raise: #171D25;
+    --border: #3C4550;
+    --border-soft: #262E37;
     --text: #EAF0FF;
-    --text-muted: #9FB0D6;
-    --text-faint: #8494C2;
+    --text-muted: #9AA6C4;
+    --text-faint: #7A87A8;
     --accent: #5C9BFF;
     --accent-strong: #8CBBFF;
     --accent-soft: rgba(92, 155, 255, 0.16);
     --accent-contrast: #071026;
     --brass: #6FA0F5;
     --brass-soft: rgba(111, 160, 245, 0.14);
-    --good: #6FCB8E;
-    --good-soft: rgba(111, 203, 142, 0.14);
-    --warn: #E0B45B;
-    --warn-soft: rgba(224, 180, 91, 0.14);
-    --danger: #E58F73;
-    --danger-soft: rgba(229, 143, 115, 0.14);
+    --good: #5FD08A;
+    --good-soft: rgba(95, 208, 138, 0.14);
+    --warn: #F0B94D;
+    --warn-soft: rgba(240, 185, 77, 0.14);
+    --danger: #F2685A;
+    --danger-soft: rgba(242, 104, 90, 0.14);
 
     --cat-app: #5C9BFF;
     --cat-bank: #4FC4CE;
     --cat-cards: #B39DDB;
     --cat-individual: #E0975A;
-    --cat-magalir: #E0B45B;
+    --cat-magalir: #F0B94D;
     --cat-family: #E497BC;
 
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.28), 0 1px 1px rgba(0, 0, 0, 0.2);
-    --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.34), 0 1px 3px rgba(0, 0, 0, 0.24);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35), 0 1px 1px rgba(0, 0, 0, 0.25);
+    --shadow-md: 0 10px 28px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3);
   }
 }
 
 :root[data-theme="dark"] {
-  --bg: #0B1526;
-  --surface: #111E36;
-  --surface-alt: #15233F;
-  --surface-raise: #16233F;
-  --border: #4A62A0;
-  --border-soft: #2E4470;
+  --bg: #10151B;
+  --surface: #171D25;
+  --surface-alt: #1D242D;
+  --surface-raise: #171D25;
+  --border: #3C4550;
+  --border-soft: #262E37;
   --text: #EAF0FF;
-  --text-muted: #9FB0D6;
-  --text-faint: #8494C2;
+  --text-muted: #9AA6C4;
+  --text-faint: #7A87A8;
   --accent: #5C9BFF;
   --accent-strong: #8CBBFF;
   --accent-soft: rgba(92, 155, 255, 0.16);
   --accent-contrast: #071026;
   --brass: #6FA0F5;
   --brass-soft: rgba(111, 160, 245, 0.14);
-  --good: #6FCB8E;
-  --good-soft: rgba(111, 203, 142, 0.14);
-  --warn: #E0B45B;
-  --warn-soft: rgba(224, 180, 91, 0.14);
-  --danger: #E58F73;
-  --danger-soft: rgba(229, 143, 115, 0.14);
+  --good: #5FD08A;
+  --good-soft: rgba(95, 208, 138, 0.14);
+  --warn: #F0B94D;
+  --warn-soft: rgba(240, 185, 77, 0.14);
+  --danger: #F2685A;
+  --danger-soft: rgba(242, 104, 90, 0.14);
 
   --cat-app: #5C9BFF;
   --cat-bank: #4FC4CE;
   --cat-cards: #B39DDB;
   --cat-individual: #E0975A;
-  --cat-magalir: #E0B45B;
+  --cat-magalir: #F0B94D;
   --cat-family: #E497BC;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.28), 0 1px 1px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.34), 0 1px 3px rgba(0, 0, 0, 0.24);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35), 0 1px 1px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 10px 28px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
 * { box-sizing: border-box; }
@@ -315,12 +328,26 @@ button, input, select, textarea {
 
 .table-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
-th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--border-soft); white-space: nowrap; }
-th { color: var(--text-muted); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.04em; }
+/* Dashed row dividers (in place of the old solid ones) and a row hover
+   highlight — matches the angular-tailwind reference's own table
+   convention (border-dashed rows, hover:bg-card) and applies to every
+   table in the app at once (Active Loans, Closed Loans, Monthly Spends)
+   since they all share these same global th/td rules. */
+/* No more `white-space: nowrap` by default — that, combined with each
+   table page's own fixed min-width below, was what forced a horizontal
+   drag-scrollbar on any screen narrower than the table's full column set.
+   Letting cell content wrap instead means columns can actually shrink to
+   fit the available width, so the table stays fully visible without
+   needing to scroll sideways — rows just get a little taller on a narrow
+   screen instead. A bit more horizontal padding too, so columns don't feel
+   cramped once they're allowed to be narrower. */
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px dashed var(--border-soft); white-space: normal; }
+th { color: var(--text-muted); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.04em; border-bottom-style: solid; white-space: nowrap; }
 td.num, th.num { text-align: right; }
 td.name { white-space: normal; min-width: 160px; }
-tr.subtotal td { background: var(--surface-alt); font-weight: 600; }
-tr.subtotal-row td { background: var(--surface-alt); font-weight: 600; }
+tbody tr:hover td { background: var(--surface-alt); }
+tr.subtotal td, tr.subtotal-row td { background: var(--surface-alt); font-weight: 600; }
+tr.subtotal:hover td, tr.subtotal-row:hover td { background: var(--surface-alt); }
 
 .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
 .field label { font-size: 12px; color: var(--text-muted); font-weight: 500; }

@@ -24,25 +24,26 @@
    explicit width on every column except Name, set on the header row, so
    every category's table lines up regardless of content or whether it also
    has a Documents column. */
-/* Same fixed-width-vs-100%-container issue as Active Loans, worse here
-   since this table has two more fixed columns (Date paid, Source) — their
-   combined width is more likely to exceed the space actually available on
-   a narrower window, which forces every column (including the auto-width
-   Name column) to be squeezed proportionally smaller instead of the table
-   overflowing into `.table-wrap`'s horizontal scrollbar. The min-width
-   below (fixed columns' total + headroom for Name) is the fix. Source is
-   also given its own `.source-cell` rule further down so a long value like
-   "Monthly Spends (Aug/Sep-2026)" wraps inside its own column instead of
-   spilling past it (the global default is `white-space: nowrap` on every
-   table cell). */
-::ng-deep .table-wrap table { table-layout: fixed; min-width: 1090px; }
-::ng-deep .table-wrap th:first-child { width: auto; }
-::ng-deep .table-wrap th.num { width: 90px; }
-::ng-deep .table-wrap th.date-col { width: 95px; }
-::ng-deep .table-wrap th.source-col { width: 130px; }
-::ng-deep .table-wrap th.remarks-col { width: 160px; }
-::ng-deep .table-wrap th.docs-col { width: 140px; }
-::ng-deep .table-wrap th.actions-col { width: 40px; }
+/* Widths are percentages of the table's own width (always 100% of its
+   container, set globally in styles.scss) rather than fixed pixels — with
+   fixed px widths, table-layout: fixed has no good way to split a width
+   deficit between an auto-width column (Name) and explicit-width ones when
+   the container is narrower than their sum: Name collapsed to almost
+   nothing on a normal-width screen (a name wrapping one word per line)
+   while the numeric columns barely shrank at all. Percentages that sum to
+   100% remove that ambiguity — every column, Name included, is always
+   exactly that share of whatever width is actually available, so the
+   table fits any screen with no drag-scrollbar and no single column
+   collapsing. These keep the same relative proportions the old pixel
+   widths had (each is that column's old px value ÷ the old 1090px total). */
+::ng-deep .table-wrap table { table-layout: fixed; }
+::ng-deep .table-wrap th:first-child { width: 15.1%; }
+::ng-deep .table-wrap th.num { width: 8.3%; }
+::ng-deep .table-wrap th.date-col { width: 8.7%; }
+::ng-deep .table-wrap th.source-col { width: 11.9%; }
+::ng-deep .table-wrap th.remarks-col { width: 14.7%; }
+::ng-deep .table-wrap th.docs-col { width: 12.8%; }
+::ng-deep .table-wrap th.actions-col { width: 3.7%; }
 
 .source-cell { white-space: normal; word-break: break-word; }
 
@@ -52,8 +53,13 @@
    width on this inner block (a normal block box, not a table cell) is
    what actually holds the column steady. */
 .remarks-cell { white-space: normal; }
+/* max-width: 100% (not a fixed px value) so this always matches its
+   actual table cell — the Remarks column is now a percentage of the
+   table's width (see table-layout note above), so a fixed 170px cap would
+   overflow a narrower cell on a smaller screen instead of truncating
+   inside it. */
 .remarks-text {
-  max-width: 170px;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

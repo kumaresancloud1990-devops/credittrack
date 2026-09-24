@@ -11,6 +11,8 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const { spawn } = require('child_process');
 const { Client } = require('pg');
 const fs = require('fs');
@@ -20,7 +22,29 @@ const crypto = require('crypto');
 const pool = require('./db/pool');
 
 const app = express();
-app.use(cors());
+
+// Sets a standard set of defensive HTTP response headers (X-Content-Type-
+// Options, X-Frame-Options, a disabled Strict-Transport-Security until
+// served over HTTPS, etc.). Its default Content-Security-Policy is aimed at
+// HTML pages; this is a JSON API with no HTML views of its own (the
+// frontend's nginx config is where a CSP for the actual app belongs), so
+// that one piece is turned off here to avoid setting a policy that doesn't
+// apply to what this server actually returns.
+app.use(helmet({ contentSecurityPolicy: false }));
+
+// In production, nginx proxies /api/ under the same origin as the built
+// frontend (see nginx.conf), so no cross-origin request is ever actually
+// needed there — this CORS config only matters for the `ng serve` dev
+// workflow (frontend on :4200 talking to this server on :4000 directly).
+// Configure extra allowed origins via ALLOWED_ORIGINS (comma-separated)
+// rather than the previous `cors()` with no options, which allowed
+// cross-origin requests from literally any site.
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:4200')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+app.use(cors({ origin: allowedOrigins }));
+
 app.use(express.json({ limit: '2mb' }));
 
 function uid() {
@@ -124,7 +148,11 @@ app.get('/healthz', async (req, res) => {
     await pool.query('SELECT 1');
     res.json({ status: 'ok', db: 'connected' });
   } catch (err) {
-    res.status(503).json({ status: 'error', db: 'unreachable', message: err.message });
+    // /healthz is deliberately unauthenticated (see comment above), so the
+    // raw driver error — which can include connection details — is logged
+    // server-side only, not handed to whoever is asking.
+    console.error('[healthz] Database check failed:', err.message);
+    res.status(503).json({ status: 'error', db: 'unreachable' });
   }
 });
 
@@ -132,10 +160,33 @@ app.get('/healthz', async (req, res) => {
 // Auth middleware — shared family passcode (see note at top of file).
 // ============================================================
 
-app.use('/api', (req, res, next) => {
-  const key = req.header('x-family-key');
-  const expected = process.env.FAMILY_ACCESS_KEY;
-  if (!expected || key !== expected) {
+// Throttles repeated failed passcode attempts per IP. Successful requests
+// (the normal case — this app calls its own API constantly) don't count
+// against the limit at all, so this only ever engages against someone
+// actually guessing the passcode.
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true,
+  message: { error: 'too_many_attempts', message: 'Too many failed passcode attempts — try again in a few minutes.' },
+});
+
+app.use('/api', authLimiter, (req, res, next) => {
+  const key = req.header('x-family-key') || '';
+  const expected = process.env.FAMILY_ACCESS_KEY || '';
+  const keyBuf = Buffer.from(key);
+  const expectedBuf = Buffer.from(expected);
+  // A plain `!==` string comparison short-circuits at the first mismatched
+  // character, which leaks timing information an attacker could in theory
+  // use to guess the passcode one character at a time. timingSafeEqual
+  // takes the same time regardless of where the mismatch is — but it
+  // throws if the two buffers aren't the same length, so that's checked
+  // first (comparing lengths leaks far less than comparing content).
+  const authorized =
+    expected.length > 0 && keyBuf.length === expectedBuf.length && crypto.timingSafeEqual(keyBuf, expectedBuf);
+  if (!authorized) {
     return res.status(401).json({ error: 'unauthorized' });
   }
   next();
@@ -739,7 +790,12 @@ async function reapplyAppGrants(migratorConnStr) {
   }
 }
 
-app.get('/api/backup', async (req, res) => {
+// POST, not GET — this triggers a full database export, and actions with a
+// side effect (even a read-heavy one like this, which still shells out to
+// pg_dump and writes a temp file) are better off not being a plain GET:
+// a GET's URL can end up cached, logged by proxies, or sitting in browser
+// history in more places than a POST's would.
+app.post('/api/backup', async (req, res) => {
   const connStr = process.env.DATABASE_URL;
   if (!connStr) {
     return res.status(500).json({ error: 'server_error', message: 'No migrator database connection configured — cannot back up.' });

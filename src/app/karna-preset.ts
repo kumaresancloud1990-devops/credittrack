@@ -1,5 +1,5 @@
-import { definePreset } from '@primeng/themes';
-import Aura from '@primeng/themes/aura';
+import { definePreset } from '@primeuix/themes';
+import Aura from '@primeuix/themes/aura';
 
 /**
  * A thin customization of PrimeNG's Aura preset that maps the app's own
@@ -64,23 +64,23 @@ export const KarnaPreset = definePreset(Aura, {
           400: '#6F86B8',
           500: '#55699C',
           600: '#3F5080',
-          700: '#2E4470',
-          800: '#15233F',
-          900: '#111E36',
-          950: '#0B1526',
+          700: '#232C42',
+          800: '#131B2F',
+          900: '#0E1526',
+          950: '#05070D',
         },
         text: {
           color: '#EAF0FF',
-          mutedColor: '#9FB0D6',
+          mutedColor: '#9AA6C4',
         },
         formField: {
           // Matches styles.scss's hand-rolled `.field input/select/textarea`
           // (background: var(--surface)) so native and PrimeNG-rendered
           // form fields look identical instead of one being darker than
           // the other.
-          background: '#111E36',
+          background: '#0E1526',
           color: '#EAF0FF',
-          placeholderColor: '#8494C2',
+          placeholderColor: '#7A87A8',
         },
       },
     },

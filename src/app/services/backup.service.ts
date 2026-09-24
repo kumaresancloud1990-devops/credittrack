@@ -41,7 +41,11 @@ export class BackupService {
   async downloadBackup(): Promise<void> {
     let blob: Blob;
     try {
-      blob = await firstValueFrom(this.http.get(`${this.apiBase}/api/backup`, { responseType: 'blob' }));
+      // POST, not GET — the backend endpoint changed to POST since a full
+      // database export has real server-side effects (shelling out to
+      // pg_dump, writing a temp file) and shouldn't be a plain GET that
+      // could end up cached or logged by an intermediary.
+      blob = await firstValueFrom(this.http.post(`${this.apiBase}/api/backup`, null, { responseType: 'blob' }));
     } catch (err) {
       throw new Error(apiErrorMessage(err, 'Backup failed.'));
     }

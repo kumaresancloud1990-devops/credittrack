@@ -188,7 +188,17 @@ export class PdfService {
     return `Monthly_Spends_${safeLabel}.pdf`;
   }
 
-  /** Builds a well-aligned, single-month PDF and triggers a browser download. */
+  /**
+   * Builds a well-aligned, single-month PDF and triggers a browser
+   * download. (A native-share-panel-first version of this existed briefly
+   * — Web Share API, so the OS share sheet could hand the file straight to
+   * WhatsApp — but WhatsApp's Windows desktop app isn't a registered
+   * system share target, so on Windows that panel just came back with its
+   * own "we couldn't show you all the ways you could share" error before
+   * falling back to this same download anyway. Going straight to the
+   * download avoids that broken-looking extra step; the component pairs
+   * it with a WhatsApp Web link so sending the file is still one click
+   * away, just done by hand instead of through the OS share sheet.) */
   async exportMonthAndDownload(mid: string): Promise<void> {
     const m = this.data.spends()[mid];
     if (!m) return;

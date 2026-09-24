@@ -29,6 +29,14 @@
   </div>
 </header>
 
+@if (pdfExportMessage()) {
+  <p-message severity="info" styleClass="info-banner">
+    {{ pdfExportMessage() }}
+    <a href="https://web.whatsapp.com/" target="_blank" rel="noopener" class="whatsapp-web-link">Open WhatsApp Web&nbsp;↗</a>
+    to attach it there.
+  </p-message>
+}
+
 @if (cloneError()) {
   <p-message severity="error" styleClass="error-banner">{{ cloneError() }}</p-message>
 }

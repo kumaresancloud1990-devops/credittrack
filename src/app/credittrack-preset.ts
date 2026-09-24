@@ -1,5 +1,5 @@
-import { definePreset } from '@primeng/themes';
-import Aura from '@primeng/themes/aura';
+import { definePreset } from '@primeuix/themes';
+import Aura from '@primeuix/themes/aura';
 
 /**
  * A thin customization of PrimeNG's Aura preset that maps the app's own
@@ -43,13 +43,13 @@ export const CreditTrackPreset = definePreset(Aura, {
         // Aura's default dark scheme builds every card/table/dialog/input
         // background from its own generic `surface` scale (zinc grays —
         // surface.900 ends up literally #18181b), which has nothing to do
-        // with styles.scss's custom navy dark palette (--bg #0B1526,
-        // --surface #111E36, --surface-alt #15233F, --border-soft #2E4470).
-        // The result: PrimeNG-rendered cards/tables/menus/dialogs painted
-        // in a near-black gray that barely differs from the page background
-        // OR from our own hand-rolled elements — card boundaries vanish and
-        // the whole page reads as one flat, "scattered" block with no
-        // visual hierarchy. Anchoring this scale to the exact same navy
+        // with styles.scss's custom "cool slate" dark palette (--bg
+        // #10151B, --surface #171D25, --surface-alt #1D242D, --border-soft
+        // #262E37). The result: PrimeNG-rendered cards/tables/menus/dialogs
+        // painted in a near-black gray that barely differs from the page
+        // background OR from our own hand-rolled elements — card boundaries
+        // vanish and the whole page reads as one flat, "scattered" block
+        // with no visual hierarchy. Anchoring this scale to the exact same
         // tokens makes every PrimeNG surface (p-card, p-table, p-dialog,
         // p-select overlay, p-menu, inputs) consistent with the rest of the
         // app, since Aura's dark tokens for content/overlay/formField are
@@ -64,23 +64,23 @@ export const CreditTrackPreset = definePreset(Aura, {
           400: '#6F86B8',
           500: '#55699C',
           600: '#3F5080',
-          700: '#2E4470',
-          800: '#15233F',
-          900: '#111E36',
-          950: '#0B1526',
+          700: '#262E37',
+          800: '#1D242D',
+          900: '#171D25',
+          950: '#10151B',
         },
         text: {
           color: '#EAF0FF',
-          mutedColor: '#9FB0D6',
+          mutedColor: '#9AA6C4',
         },
         formField: {
           // Matches styles.scss's hand-rolled `.field input/select/textarea`
           // (background: var(--surface)) so native and PrimeNG-rendered
           // form fields look identical instead of one being darker than
           // the other.
-          background: '#111E36',
+          background: '#171D25',
           color: '#EAF0FF',
-          placeholderColor: '#8494C2',
+          placeholderColor: '#7A87A8',
         },
       },
     },

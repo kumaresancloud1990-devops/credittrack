@@ -52,6 +52,20 @@
 ::ng-deep .table-wrap table { table-layout: fixed; }
 ::ng-deep .table-wrap th:first-child { width: 15%; }
 ::ng-deep .table-wrap th.num { width: 8%; }
+/* styles.scss sets `white-space: nowrap` on every <th> globally — fine when
+   a header's text actually fits its column, but several of these columns
+   are narrower than their header text ("Outstanding" in an 8%-wide column,
+   "Last paid"/"EMI ends" in 9%/8%-wide ones). A table cell's overflow isn't
+   clipped by default, so nowrap just lets the text spill out past its own
+   column and paint over the next column's header — e.g. "Outstanding"
+   bleeding into "Balance", "Last paid" into "EMI ends". `white-space:
+   normal` alone isn't enough for a single unbroken word like "Outstanding"
+   (nothing to break a line at without a space) — `overflow-wrap:
+   break-word` is what actually lets it wrap onto a second line instead of
+   overflowing. Scoped to just this table's headers, so the global th rule
+   (and short headers elsewhere, like "Name"/"Status"/"Remarks", which never
+   actually need to wrap) are unaffected. */
+::ng-deep .table-wrap th { white-space: normal; overflow-wrap: break-word; line-height: 1.25; }
 /* Wider than its "num" siblings (Total/Outstanding/Balance) — in edit mode
    this column stacks three inputs (EMI, tenure, start-date-with-icon), and
    the start-date field needs more than 8%'s worth of room to show
@@ -71,7 +85,13 @@
 ::ng-deep .table-wrap th.actions-col { width: 44px; position: sticky; right: 0; background: var(--surface); }
 
 .remark-note { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
-.emi-end-cell, .last-paid-cell { font-size: 13px; white-space: nowrap; }
+/* Same overflow-into-the-next-column problem as the headers above, just on
+   the data row instead: a longer formatted date ("Sep 01, 2026") doesn't
+   always fit these columns' 9%/8% width, and `white-space: nowrap` let it
+   spill into the next cell rather than wrap. Unlike the headers, a date
+   string already has a space to break at, so plain `white-space: normal`
+   (no `overflow-wrap` needed) is enough here. */
+.emi-end-cell, .last-paid-cell { font-size: 13px; white-space: normal; }
 
 /* This loan's own "X/Y paid" + "Z pending" — projected from its own start
    date and tenure (component.emiProgress), not a category rollup. Two

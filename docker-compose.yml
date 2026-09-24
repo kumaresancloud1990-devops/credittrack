@@ -31,8 +31,16 @@ services:
       # roles the very first time this runs against an empty volume — see
       # server/db/init/01-provision-roles.sh.
       - ./server/db/init:/docker-entrypoint-initdb.d:ro
-    ports:
-      - '5433:5432'
+    # No `ports:` mapping here on purpose — only the `backend` container
+    # needs to reach Postgres, and it does that over this Compose file's own
+    # internal Docker network. Publishing 5432 to the host would let anyone
+    # who can reach this machine connect to the database directly,
+    # completely bypassing the app's passcode check (which only guards the
+    # HTTP `/api/*` routes, not the database port itself). If you need a
+    # local `psql`/GUI client for debugging, use
+    # `docker compose exec db psql -U postgres` instead, or temporarily add
+    # back `ports: ['127.0.0.1:5433:5432']` (loopback-only, never a bare
+    # `5433:5432`) for the duration of that session.
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U postgres']
       interval: 5s
