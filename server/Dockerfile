@@ -26,6 +26,8 @@ RUN npm ci && touch .env
 
 COPY server/db ./db
 COPY server/migrations ./migrations
+COPY server/auth ./auth
+COPY server/scripts ./scripts
 COPY server/index.js ./index.js
 COPY public/data/seed-data.json /public/data/seed-data.json
 

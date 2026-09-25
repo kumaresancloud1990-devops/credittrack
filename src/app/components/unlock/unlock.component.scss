@@ -1,10 +1,113 @@
+/* Full-bleed brand background (see the inline <svg class="hero-art"> in the
+   template for what it draws) with the product summary on the left and the
+   passcode card floating over it on the right. The gradient/illustration
+   colors are fixed (not tied to --bg/--surface) on purpose — this is brand
+   artwork, like a login hero panel, so it stays the same rich navy-to-blue
+   regardless of whether the OS is in light or dark mode. Only the passcode
+   card itself (.unlock-card) still uses the theme tokens, so it keeps
+   matching the rest of the app once you're past this screen. */
 .unlock-shell {
+  position: relative;
   min-height: 100vh;
+  overflow: hidden;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 40px;
+  padding: 48px 64px;
+}
+
+.hero-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  display: block;
+}
+
+.hero-copy {
+  position: relative;
+  z-index: 1;
+  max-width: 460px;
+  color: #FFFFFF;
+}
+
+.hero-mark {
+  width: 52px;
+  height: 52px;
+  margin-bottom: 22px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.28);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
-  background: var(--bg);
+  color: #FFFFFF;
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: 22px;
+}
+
+.hero-copy h1 {
+  font-size: 34px;
+  line-height: 1.15;
+  margin-bottom: 6px;
+  color: #FFFFFF;
+}
+
+.hero-tagline {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #BFD6FF;
+  margin: 0 0 18px;
+}
+
+.hero-desc {
+  font-size: 15px;
+  line-height: 1.65;
+  color: rgba(255, 255, 255, 0.82);
+  margin: 0 0 26px;
+}
+
+.hero-points {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+.hero-points li {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  font-size: 13.5px;
+  color: rgba(255, 255, 255, 0.92);
+}
+.hero-points i {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: #BFD6FF;
+}
+
+.unlock-panel {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .unlock-card {
@@ -15,6 +118,9 @@
   align-items: stretch;
   text-align: center;
   gap: 4px;
+  background: var(--surface);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 24px 60px -12px rgba(6, 14, 32, 0.45), 0 4px 18px rgba(6, 14, 32, 0.22);
 }
 
 .mark {
@@ -32,10 +138,52 @@
   font-size: 20px;
 }
 
-h1 { font-size: 18px; margin-bottom: 4px; }
+.unlock-card h2 { font-size: 18px; margin-bottom: 4px; color: var(--text); }
 .page-sub { color: var(--text-muted); font-size: 13px; margin: 0 0 18px; }
 
+/* Sign in / Create account toggle — plain segmented tabs rather than a
+   dropdown or a separate route, so switching is a single click and the
+   rest of the card (hero art, branding) never has to re-mount. */
+.mode-tabs {
+  display: flex;
+  margin: 4px 0 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.mode-tabs button {
+  flex: 1 1 0;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 8px 6px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.mode-tabs button.active {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+.mode-tabs button:not(.active):hover { background: var(--surface-alt); }
+
 .field { text-align: left; }
+.field label {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-faint);
+  margin-bottom: 4px;
+}
+
+.form-error {
+  color: var(--danger);
+  font-size: 12.5px;
+  text-align: left;
+  margin: -4px 0 10px;
+}
 
 .unlock-btn { width: 100%; justify-content: center; margin-top: 4px; }
 
@@ -50,4 +198,13 @@ h1 { font-size: 18px; margin-bottom: 4px; }
   background: var(--surface-alt);
   padding: 1px 5px;
   border-radius: 4px;
+}
+
+/* Below this width there isn't room for the hero copy next to the card
+   without either crowding the text or shrinking the card uncomfortably —
+   the background and card alone (the pre-existing, already-mobile-friendly
+   layout) carry the page just fine on a phone. */
+@media (max-width: 880px) {
+  .unlock-shell { justify-content: center; padding: 24px; }
+  .hero-copy { display: none; }
 }

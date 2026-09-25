@@ -1,9 +1,11 @@
 import { Component, signal } from '@angular/core';
 
 import { RouterLink, RouterLinkActive } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
 import { MessageModule } from 'primeng/message';
+import { InputTextModule } from 'primeng/inputtext';
 import { GoogleDriveService } from '../../services/google-drive.service';
 import { ExcelService } from '../../services/excel.service';
 import { DataService } from '../../services/data.service';
@@ -26,7 +28,7 @@ const NAV_ITEMS: NavItem[] = [
 
 @Component({
     selector: 'app-sidebar',
-    imports: [RouterLink, RouterLinkActive, ButtonModule, TagModule, MessageModule],
+    imports: [RouterLink, RouterLinkActive, FormsModule, ButtonModule, TagModule, MessageModule, InputTextModule],
     templateUrl: './sidebar.component.html',
     styleUrl: './sidebar.component.scss'
 })
@@ -41,17 +43,112 @@ export class SidebarComponent {
   readonly dbMessage = signal<string | null>(null);
   readonly dbMessageIsError = signal(false);
 
+  readonly changeUsernameOpen = signal(false);
+  readonly newUsername = signal('');
+  readonly changingUsername = signal(false);
+  readonly changeUsernameMessage = signal<string | null>(null);
+  readonly changeUsernameMessageIsError = signal(false);
+
+  readonly changePasswordOpen = signal(false);
+  readonly newPassword = signal('');
+  readonly confirmPassword = signal('');
+  readonly changingPassword = signal(false);
+  readonly changePasswordMessage = signal<string | null>(null);
+  readonly changePasswordMessageIsError = signal(false);
+
   constructor(
     public drive: GoogleDriveService,
     private excel: ExcelService,
     public data: DataService,
-    private auth: AuthService,
+    public auth: AuthService,
     private backup: BackupService
   ) {}
 
   signOut(): void {
-    if (confirm('Sign out and clear the family passcode from this browser tab?')) {
+    if (confirm('Sign out of this account on this browser tab?')) {
       this.auth.signOut();
+    }
+  }
+
+  openChangeUsername(): void {
+    this.newUsername.set(this.auth.username() || '');
+    this.changeUsernameMessage.set(null);
+    this.changeUsernameOpen.set(true);
+  }
+
+  cancelChangeUsername(): void {
+    this.changeUsernameOpen.set(false);
+    this.newUsername.set('');
+  }
+
+  async submitChangeUsername(): Promise<void> {
+    const next = this.newUsername().trim();
+    this.changeUsernameMessage.set(null);
+
+    if (!next) return;
+    if (next === this.auth.username()) {
+      this.changeUsernameOpen.set(false);
+      return;
+    }
+
+    this.changingUsername.set(true);
+    try {
+      await this.auth.changeUsername(next);
+      this.changeUsernameMessageIsError.set(false);
+      this.changeUsernameMessage.set('Username changed — this browser tab has already switched over to it.');
+      this.changeUsernameOpen.set(false);
+    } catch (err) {
+      this.changeUsernameMessageIsError.set(true);
+      this.changeUsernameMessage.set(err instanceof Error ? err.message : 'Could not change the username.');
+    } finally {
+      this.changingUsername.set(false);
+      setTimeout(() => this.changeUsernameMessage.set(null), 8000);
+    }
+  }
+
+  openChangePassword(): void {
+    this.newPassword.set('');
+    this.confirmPassword.set('');
+    this.changePasswordMessage.set(null);
+    this.changePasswordOpen.set(true);
+  }
+
+  cancelChangePassword(): void {
+    this.changePasswordOpen.set(false);
+    this.newPassword.set('');
+    this.confirmPassword.set('');
+  }
+
+  async submitChangePassword(): Promise<void> {
+    const next = this.newPassword();
+    const confirmVal = this.confirmPassword();
+    this.changePasswordMessage.set(null);
+
+    if (next.trim().length < 6) {
+      this.changePasswordMessageIsError.set(true);
+      this.changePasswordMessage.set('Password must be at least 6 characters.');
+      return;
+    }
+    if (next !== confirmVal) {
+      this.changePasswordMessageIsError.set(true);
+      this.changePasswordMessage.set("Passwords don't match — check both fields and try again.");
+      return;
+    }
+
+    this.changingPassword.set(true);
+    try {
+      await this.auth.changePassword(next);
+      this.changePasswordMessageIsError.set(false);
+      this.changePasswordMessage.set('Password changed — this browser tab has already switched over to it.');
+      this.newPassword.set('');
+      this.confirmPassword.set('');
+      this.changePasswordOpen.set(false);
+    } catch (err) {
+      this.changePasswordMessageIsError.set(true);
+      this.changePasswordMessage.set(err instanceof Error ? err.message : 'Could not change the password.');
+    } finally {
+      this.changingPassword.set(false);
+      setTimeout(() => this.changePasswordMessage.set(null), 8000);
     }
   }
 

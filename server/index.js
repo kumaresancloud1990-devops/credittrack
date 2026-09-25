@@ -2,12 +2,25 @@
 //
 // Plain Node.js + Express + pg. No TypeScript, no build step, no ORM.
 //
-// AUTH NOTE: every /api/* route requires a header `x-family-key` matching
-// process.env.FAMILY_ACCESS_KEY. This is a lightweight *shared passcode*
-// gate meant only to keep this private family app off the open internet if
-// it's ever exposed on a home network — it is NOT real multi-user auth
-// (no per-user accounts, sessions, or permissions). Anyone with the
-// passcode has full read/write access to all the data.
+// AUTH NOTE: every /api/* route requires two headers, `x-username` and
+// `x-password`, checked against the `users` table on every request (no
+// sessions/tokens — same stateless shape the old shared-passcode gate had,
+// just checking a username+password pair instead of one bare secret).
+// Registration is open (see POST /api/register below) — anyone can create
+// their own account — but there's no per-account data split: every account
+// sees the same one shared demo dataset. This only changes how you get in
+// the door, not what you see once you're in.
+//
+// Passwords live in the database (users.password_hash, hashed with scrypt —
+// see auth/password.js), never in an environment variable. FAMILY_ACCESS_KEY
+// still exists, but only as a one-time bootstrap value for a completely
+// fresh install with no users yet: on first boot, if `users` is empty,
+// whatever FAMILY_ACCESS_KEY is set to gets hashed and saved as the
+// starting password for a new "kumaresan" account, and the env var is never
+// consulted again after that. To change the username or password later, use
+// the in-app "Account" settings, or `node scripts/set-password.js
+// <username> "new-password"` for the CLI/recovery path — see that script
+// and DOCKER.md/README.md for details.
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -20,8 +33,22 @@ const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 const pool = require('./db/pool');
+const { hashPassword, verifyPassword } = require('./auth/password');
 
 const app = express();
+
+// In production this server only ever sits behind exactly one proxy — the
+// frontend's nginx container (see nginx.conf's proxy_set_header X-Forwarded-
+// For) — never directly exposed to the internet itself. `1` tells Express
+// (and express-rate-limit, below, which relies on this to identify clients
+// by IP) to trust that one hop's X-Forwarded-For and use it as the real
+// client IP. Without this, Express refuses to trust ANY X-Forwarded-For
+// value on principle (since it's trivial for a client to fake one directly),
+// which is the right default for a server exposed straight to the internet,
+// but wrong here where nginx has already overwritten it with the real
+// value — express-rate-limit then can't safely derive a per-client key and
+// throws instead of silently doing the wrong thing.
+app.set('trust proxy', 1);
 
 // Sets a standard set of defensive HTTP response headers (X-Content-Type-
 // Options, X-Frame-Options, a disabled Strict-Transport-Security until
@@ -138,7 +165,7 @@ function mapMeta(r) {
 
 // ============================================================
 // Health check — deliberately OUTSIDE the /api prefix so it needs no
-// passcode. Checks the database round-trip too, not just "the process is
+// login. Checks the database round-trip too, not just "the process is
 // alive", so it's useful for an uptime check or a container/orchestrator
 // readiness probe if this is ever deployed that way.
 // ============================================================
@@ -157,39 +184,112 @@ app.get('/healthz', async (req, res) => {
 });
 
 // ============================================================
-// Auth middleware — shared family passcode (see note at top of file).
+// Auth — username + password, checked fresh on every request (see the
+// AUTH NOTE at the top of this file).
 // ============================================================
 
-// Throttles repeated failed passcode attempts per IP. Successful requests
-// (the normal case — this app calls its own API constantly) don't count
-// against the limit at all, so this only ever engages against someone
-// actually guessing the passcode.
+// Throttles repeated failed login/registration attempts per IP. Successful
+// requests (the normal case — this app calls its own API constantly) don't
+// count against the limit at all, so this only ever engages against
+// someone actually guessing credentials or spamming account creation.
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: true,
-  message: { error: 'too_many_attempts', message: 'Too many failed passcode attempts — try again in a few minutes.' },
+  message: { error: 'too_many_attempts', message: 'Too many failed attempts — try again in a few minutes.' },
 });
 
-app.use('/api', authLimiter, (req, res, next) => {
-  const key = req.header('x-family-key') || '';
-  const expected = process.env.FAMILY_ACCESS_KEY || '';
-  const keyBuf = Buffer.from(key);
-  const expectedBuf = Buffer.from(expected);
-  // A plain `!==` string comparison short-circuits at the first mismatched
-  // character, which leaks timing information an attacker could in theory
-  // use to guess the passcode one character at a time. timingSafeEqual
-  // takes the same time regardless of where the mismatch is — but it
-  // throws if the two buffers aren't the same length, so that's checked
-  // first (comparing lengths leaks far less than comparing content).
-  const authorized =
-    expected.length > 0 && keyBuf.length === expectedBuf.length && crypto.timingSafeEqual(keyBuf, expectedBuf);
-  if (!authorized) {
-    return res.status(401).json({ error: 'unauthorized' });
+// Same rules a username has to satisfy when changing it later (see POST
+// /api/change-username below).
+function validUsername(name) {
+  return typeof name === 'string' && /^[a-zA-Z0-9_.-]{3,32}$/.test(name);
+}
+
+// Looks up a user by username (case-insensitive) and checks the password
+// against their stored hash. Returns the user row ({id, username}) on
+// success, or null — never throws for "wrong credentials", only for an
+// actual database/server problem, so callers can tell the two apart.
+async function authenticate(username, password) {
+  const name = String(username || '').trim();
+  if (!name || !password) return null;
+  const { rows } = await pool.query('SELECT id, username, password_hash FROM users WHERE lower(username) = lower($1)', [name]);
+  const user = rows[0];
+  if (!user) return null;
+  const ok = await verifyPassword(password, user.password_hash);
+  if (!ok) return null;
+  return { id: user.id, username: user.username };
+}
+
+// POST /api/register — deliberately public (registered before the /api
+// auth middleware below), and open to anyone: this is a portfolio/demo
+// app, so unlike the original it's mirrored from, letting visitors create
+// their own account is the point. Every account still sees the same one
+// shared demo dataset — there's no per-account data split — so this is
+// really just "give yourself a real login" rather than "get your own
+// private workspace."
+app.post('/api/register', authLimiter, async (req, res) => {
+  try {
+    const b = req.body || {};
+    const username = String(b.username || '').trim();
+    const password = String(b.password || '');
+    if (!validUsername(username)) {
+      return res.status(400).json({
+        error: 'bad_request',
+        message: 'Username must be 3–32 characters: letters, numbers, dots, hyphens or underscores only.',
+      });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'bad_request', message: 'Password must be at least 6 characters.' });
+    }
+    const { rows: clash } = await pool.query('SELECT 1 FROM users WHERE lower(username) = lower($1)', [username]);
+    if (clash.length) {
+      return res.status(409).json({ error: 'conflict', message: 'That username is already taken.' });
+    }
+    const hash = await hashPassword(password);
+    await pool.query('INSERT INTO users (username, password_hash) VALUES ($1, $2)', [username, hash]);
+    res.status(201).json({ status: 'ok', username });
+  } catch (err) {
+    console.error('POST /api/register failed:', err);
+    res.status(500).json({ error: 'server_error', message: 'Could not create the account.' });
   }
-  next();
+});
+
+// POST /api/login — deliberately public and just re-runs the same
+// credential check that the /api middleware below does, and nothing else.
+// It exists purely so the frontend's login form gets an immediate "that's
+// wrong" instead of silently storing a bad credential and finding out only
+// when the next data request fails with a generic error. Rate-limited the
+// same as everything else under /api, so this can't be used to brute-force
+// a password any faster than the normal middleware path could.
+app.post('/api/login', authLimiter, async (req, res) => {
+  try {
+    const b = req.body || {};
+    const user = await authenticate(b.username, b.password);
+    if (!user) {
+      return res.status(401).json({ error: 'unauthorized', message: 'Wrong username or password.' });
+    }
+    res.json({ status: 'ok', username: user.username });
+  } catch (err) {
+    console.error('POST /api/login failed:', err);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+app.use('/api', authLimiter, async (req, res, next) => {
+  try {
+    const user = await authenticate(req.header('x-username'), req.header('x-password'));
+    if (!user) {
+      return res.status(401).json({ error: 'unauthorized' });
+    }
+    req.userId = user.id;
+    req.username = user.username;
+    next();
+  } catch (err) {
+    console.error('[auth] Credential check failed:', err);
+    res.status(500).json({ error: 'server_error' });
+  }
 });
 
 // ============================================================
@@ -922,22 +1022,120 @@ app.patch('/api/meta', async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 4000;
-const server = app.listen(PORT, () => {
-  console.log(`CrediTrack API listening on port ${PORT}`);
+// ============================================================
+// POST /api/change-username, POST /api/change-password — the in-app way to
+// update the logged-in account (see scripts/set-password.js for the
+// CLI/recovery path, which is still there and still works — this doesn't
+// replace it, it's just faster when you're already signed in). Already
+// sitting behind the same `/api` auth middleware as everything else, so
+// reaching either endpoint at all already proves knowledge of the CURRENT
+// password — no separate "confirm your current password" field needed
+// here; the frontend handles "confirm the new one twice" itself before
+// ever sending a request.
+// ============================================================
+
+app.post('/api/change-username', async (req, res) => {
+  try {
+    const newUsername = String((req.body || {}).newUsername ?? '').trim();
+    if (!validUsername(newUsername)) {
+      return res.status(400).json({
+        error: 'bad_request',
+        message: 'Username must be 3–32 characters: letters, numbers, dots, hyphens or underscores only.',
+      });
+    }
+    const { rows: clash } = await pool.query('SELECT 1 FROM users WHERE lower(username) = lower($1) AND id <> $2', [
+      newUsername,
+      req.userId,
+    ]);
+    if (clash.length) {
+      return res.status(409).json({ error: 'conflict', message: 'That username is already taken.' });
+    }
+    await pool.query('UPDATE users SET username = $1 WHERE id = $2', [newUsername, req.userId]);
+    res.json({ status: 'ok', username: newUsername });
+  } catch (err) {
+    console.error('POST /api/change-username failed:', err);
+    res.status(500).json({ error: 'server_error', message: 'Could not change the username.' });
+  }
 });
+
+app.post('/api/change-password', async (req, res) => {
+  try {
+    const newPassword = String((req.body || {}).newPassword ?? '').trim();
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'bad_request', message: 'Password must be at least 6 characters.' });
+    }
+    const hash = await hashPassword(newPassword);
+    await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, req.userId]);
+    res.json({ status: 'ok', message: 'Password changed.' });
+  } catch (err) {
+    console.error('POST /api/change-password failed:', err);
+    res.status(500).json({ error: 'server_error', message: 'Could not change the password.' });
+  }
+});
+
+// ============================================================
+// One-time account bootstrap — see the AUTH NOTE at the top of this file.
+// Only ever matters for a completely fresh install: on any install that's
+// been running a while, the 1758100000000_add-users migration already
+// created the "kumaresan" account from the old shared passcode, so `users`
+// is never empty by the time this runs. (Registration being open here
+// doesn't change that — this only fires when `users` is completely empty.)
+// ============================================================
+
+async function bootstrapUserIfNeeded() {
+  try {
+    const { rows } = await pool.query('SELECT 1 FROM users LIMIT 1');
+    if (rows.length) return; // Already has an account — FAMILY_ACCESS_KEY is ignored from here on.
+
+    const envKey = process.env.FAMILY_ACCESS_KEY;
+    if (!envKey) {
+      console.warn(
+        '[auth] No account exists yet, and FAMILY_ACCESS_KEY is not set either. Sign up via the app\'s ' +
+          'registration form, or run: node scripts/set-password.js kumaresan "your-password"'
+      );
+      return;
+    }
+    const hash = await hashPassword(envKey);
+    await pool.query(
+      `INSERT INTO users (username, password_hash) VALUES ('kumaresan', $1)`,
+      [hash]
+    );
+    console.log(
+      '[auth] Created the "kumaresan" account from FAMILY_ACCESS_KEY (hashed) — log in with that username ' +
+        'and the same password FAMILY_ACCESS_KEY was set to, or register a new account instead. ' +
+        'FAMILY_ACCESS_KEY can be removed from .env now if you like; it is only ever read for this ' +
+        'one-time bootstrap.'
+    );
+  } catch (err) {
+    console.error('[auth] Could not check/bootstrap the initial account:', err);
+  }
+}
+
+const PORT = process.env.PORT || 4000;
+let server;
+
+(async () => {
+  await bootstrapUserIfNeeded();
+  server = app.listen(PORT, () => {
+    console.log(`CrediTrack API listening on port ${PORT}`);
+  });
+})();
 
 // Graceful shutdown: stop accepting new connections, let in-flight requests
 // finish, then close the database pool cleanly, instead of dropping
 // connections mid-request on a deploy/restart/Ctrl+C.
 function shutdown(signal) {
   console.log(`\n[server] Received ${signal}, shutting down...`);
-  server.close(() => {
+  const closeDb = () =>
     pool.end().then(() => {
       console.log('[server] Closed out remaining connections and database pool.');
       process.exit(0);
     });
-  });
+  if (server) {
+    server.close(closeDb);
+  } else {
+    closeDb();
+  }
   // Force-exit if it hangs for some reason, rather than blocking forever.
   setTimeout(() => process.exit(1), 10_000).unref();
 }

@@ -46,6 +46,15 @@
 ::ng-deep .tile .value.good { color: var(--good); }
 ::ng-deep .tile .foot { font-size: 11.5px; color: var(--text-faint); margin-top: auto; padding-top: 4px; }
 
+/* Every stat tile doubles as a shortcut into Active Loans / Closed Loans
+   (see dashboard.component.ts's goToActiveLoans/goToClosedLoans) — cursor
+   and a visible focus ring make that discoverable/keyboard-usable, on top
+   of the lift-on-hover .tile already had. */
+::ng-deep .clickable-tile { cursor: pointer; outline: none; }
+::ng-deep .clickable-tile:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+::ng-deep .clickable-tile:focus-visible { box-shadow: 0 0 0 2px var(--accent), var(--shadow-md); }
+::ng-deep .clickable-tile:active { transform: translateY(0); }
+
 .grid-2 {
   display: grid;
   grid-template-columns: 1.1fr 1fr;

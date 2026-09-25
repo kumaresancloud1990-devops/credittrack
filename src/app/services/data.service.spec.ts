@@ -112,10 +112,10 @@ describe('DataService — findLoanByName', () => {
     httpMock = TestBed.inject(HttpTestingController);
 
     const auth = TestBed.inject(AuthService);
-    auth.setKey('test-passcode');
-    // The constructor's `effect()` that watches auth.familyKey() only runs
+    auth.setCredentials('kumaresan', 'test-password');
+    // The constructor's `effect()` that watches auth.username()/auth.password() only runs
     // on the next change-detection tick, not synchronously inline with
-    // setKey() — flush one tick so loadState() has actually fired before
+    // setCredentials() — flush one tick so loadState() has actually fired before
     // we try to intercept its request.
     TestBed.inject(ApplicationRef).tick();
     const req = httpMock.expectOne(`${environment.apiBaseUrl}/api/state`);
@@ -180,7 +180,7 @@ describe('DataService — ensureCurrentMonthEmiEntries gating (auto-added EMI en
 
   function loadWithLoans(loans: Partial<Loan>[], existingEntries: Record<string, unknown>[] = []) {
     const auth = TestBed.inject(AuthService);
-    auth.setKey('test-passcode');
+    auth.setCredentials('kumaresan', 'test-password');
     TestBed.inject(ApplicationRef).tick();
     const req = httpMock.expectOne(`${environment.apiBaseUrl}/api/state`);
     req.flush({
@@ -304,7 +304,7 @@ describe('DataService — applyEntryToLoan', () => {
 
   function loadWithEntry(loanBalance: number, paidAmount: number) {
     const auth = TestBed.inject(AuthService);
-    auth.setKey('test-passcode');
+    auth.setCredentials('kumaresan', 'test-password');
     TestBed.inject(ApplicationRef).tick();
     const req = httpMock.expectOne(`${environment.apiBaseUrl}/api/state`);
     req.flush({

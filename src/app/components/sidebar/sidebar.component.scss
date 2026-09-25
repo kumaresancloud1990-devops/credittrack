@@ -99,6 +99,37 @@
 .db-actions { display: flex; gap: 8px; }
 .db-btn { flex: 1 1 0; }
 
+// The logged-in username, shown as its own row rather than crammed into a
+// button label — a long username has room to truncate with an ellipsis
+// (and a title tooltip for the full value) instead of wrapping/overlapping
+// inside a fixed-height pButton the way it did before.
+.account-current-username {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  i { color: var(--text-faint); flex: none; }
+}
+
+.change-passcode-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  input {
+    width: 100%;
+    font-size: 13px;
+  }
+}
+.cp-actions { display: flex; gap: 8px; }
+.cp-actions > button:first-child { flex: 1 1 0; }
+
 .foot-note {
   font-size: 11px;
   color: var(--text-faint);

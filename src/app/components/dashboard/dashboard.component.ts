@@ -1,5 +1,6 @@
 import { Component, computed, signal, ViewChild, ApplicationRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { CardModule } from 'primeng/card';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
@@ -156,7 +157,7 @@ export class DashboardComponent {
     [this.monthlySpendChartRef, this.payoffChartRef].forEach((c) => c?.chart?.resize());
   }
 
-  constructor(public data: DataService, private appRef: ApplicationRef) {
+  constructor(public data: DataService, private appRef: ApplicationRef, private router: Router) {
     if (typeof window !== 'undefined' && window.matchMedia) {
       const mq = window.matchMedia('(prefers-color-scheme: dark)');
       mq.addEventListener('change', (e) => this.prefersDark.set(e.matches));
@@ -382,5 +383,30 @@ export class DashboardComponent {
   fmtMoneyShort(n: number): string {
     if (Math.abs(n) >= 100000) return '₹' + (n / 100000).toFixed(2).replace(/\.00$/, '') + 'L';
     return this.fmtMoney(n);
+  }
+
+  // ============================================================
+  // Dashboard tiles double as shortcuts into the exact part of Active
+  // Loans / Closed Loans they summarize, instead of just being a plain
+  // read-only snapshot — click one and land already scrolled/filtered to
+  // the thing it's showing you, rather than on Active Loans' default view
+  // and having to go find it yourself.
+  // ============================================================
+
+  /** category: jumps to exactly that category, collapsing the rest (used by
+   *  "Family credit funds", which is genuinely one single category).
+   *  focusEmi: EMI-bearing loans can be in any category, so there's no one
+   *  category to jump to — instead every category opens, so nothing that
+   *  might be carrying an EMI is hidden behind a collapsed header. Neither
+   *  option: plain visit to Active Loans, its own normal default. */
+  goToActiveLoans(opts?: { category?: LoanCategory; focusEmi?: boolean }): void {
+    const queryParams: Record<string, string> = {};
+    if (opts?.category) queryParams['category'] = opts.category;
+    if (opts?.focusEmi) queryParams['focus'] = 'emi';
+    this.router.navigate(['/active-loans'], { queryParams });
+  }
+
+  goToClosedLoans(): void {
+    this.router.navigate(['/closed-loans']);
   }
 }

@@ -4,7 +4,7 @@
 # (built and served by nginx) together, on one Docker network. See
 # DOCKER.md at the project root for the full walkthrough. Quick start:
 #
-#   1. copy .env.example to .env and fill in real passwords/passcode
+#   1. copy .env.example to .env and fill in real passwords/initial password
 #   2. docker compose up -d --build
 #   3. docker compose run --rm migrate      (first time only)
 #   4. docker compose run --rm seed         (first time only, optional)
@@ -35,7 +35,7 @@ services:
     # needs to reach Postgres, and it does that over this Compose file's own
     # internal Docker network. Publishing 5432 to the host would let anyone
     # who can reach this machine connect to the database directly,
-    # completely bypassing the app's passcode check (which only guards the
+    # completely bypassing the app's login check (which only guards the
     # HTTP `/api/*` routes, not the database port itself). If you need a
     # local `psql`/GUI client for debugging, use
     # `docker compose exec db psql -U postgres` instead, or temporarily add
@@ -59,6 +59,13 @@ services:
       DATABASE_URL: postgresql://credittrack_migrator:${CREDITTRACK_MIGRATOR_PASSWORD:-change-me-migrator}@db:5432/credittrack
       APP_DATABASE_URL: postgresql://credittrack_app:${CREDITTRACK_APP_PASSWORD:-change-me-app}@db:5432/credittrack
       DATABASE_SSL: 'false'
+      # Only used to seed the *first-ever* account (username `kumaresan`)
+      # into the database on a fresh install — the database is what's
+      # actually checked after that (see server/index.js's AUTH NOTE and
+      # DOCKER.md's "Changing the username or password"). Safe to leave
+      # set; it's simply ignored once the database already has a user row.
+      # Registration is open on this app, so this account isn't required
+      # reading for anyone else — they can just create their own.
       FAMILY_ACCESS_KEY: ${FAMILY_ACCESS_KEY:-change-me}
       PORT: 4000
     ports:

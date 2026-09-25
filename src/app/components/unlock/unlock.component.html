@@ -1,26 +1,161 @@
 <div class="unlock-shell">
-  <form class="card unlock-card" (ngSubmit)="submit()">
-    <div class="mark">K</div>
+  <!-- Decorative brand background — an original inline illustration (no
+       external image request), so it stays self-contained and CSP-safe
+       like the rest of the app. Built around the product itself: a rupee
+       mark (the app's own currency), an ascending bar row tapering off
+       (an EMI schedule paying itself down to nothing — the whole point of
+       this app's EMI + spend tracking), and a soft ledger-style dot grid
+       for texture. Spans the full screen behind everything else; marked
+       aria-hidden since it's decoration, not content. -->
+  <svg class="hero-art" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <defs>
+      <linearGradient id="heroBg" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#0B1830" />
+        <stop offset="55%" stop-color="#143E96" />
+        <stop offset="100%" stop-color="#1D56C7" />
+      </linearGradient>
+      <radialGradient id="glowA" cx="22%" cy="18%" r="55%">
+        <stop offset="0%" stop-color="#5C9BFF" stop-opacity="0.38" />
+        <stop offset="100%" stop-color="#5C9BFF" stop-opacity="0" />
+      </radialGradient>
+      <radialGradient id="glowB" cx="85%" cy="88%" r="50%">
+        <stop offset="0%" stop-color="#8CBBFF" stop-opacity="0.30" />
+        <stop offset="100%" stop-color="#8CBBFF" stop-opacity="0" />
+      </radialGradient>
+      <pattern id="ledgerDots" width="34" height="34" patternUnits="userSpaceOnUse">
+        <circle cx="1.4" cy="1.4" r="1.4" fill="#FFFFFF" fill-opacity="0.09" />
+      </pattern>
+    </defs>
+
+    <rect width="1600" height="900" fill="url(#heroBg)" />
+    <rect width="1600" height="900" fill="url(#ledgerDots)" />
+    <rect width="1600" height="900" fill="url(#glowA)" />
+    <rect width="1600" height="900" fill="url(#glowB)" />
+
+    <!-- Big soft currency mark, mostly off-canvas — texture, not a focal point -->
+    <text x="1180" y="640" font-family="Georgia, serif" font-size="680" fill="#FFFFFF" fill-opacity="0.045" font-weight="700">₹</text>
+
+    <!-- Ascending bars, tapering to zero on the right — echoes an EMI
+         schedule paying itself down to nothing. -->
+    <g fill="#FFFFFF">
+      <rect x="120" y="600" width="50" height="200" rx="8" fill-opacity="0.14" />
+      <rect x="196" y="540" width="50" height="260" rx="8" fill-opacity="0.18" />
+      <rect x="272" y="470" width="50" height="330" rx="8" fill-opacity="0.24" />
+      <rect x="348" y="400" width="50" height="400" rx="8" fill-opacity="0.32" />
+      <rect x="424" y="330" width="50" height="470" rx="8" fill-opacity="0.40" />
+    </g>
+    <polyline points="145,600 221,540 297,470 373,400 449,330" fill="none" stroke="#FFFFFF" stroke-opacity="0.5" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+    <circle cx="449" cy="330" r="7" fill="#FFFFFF" fill-opacity="0.8" />
+
+    <!-- A loosely stacked "cards" motif -->
+    <g transform="translate(760,600) rotate(-8)">
+      <rect x="0" y="40" width="230" height="136" rx="18" fill="#FFFFFF" fill-opacity="0.05" />
+      <rect x="18" y="18" width="230" height="136" rx="18" fill="#FFFFFF" fill-opacity="0.09" stroke="#FFFFFF" stroke-opacity="0.16" stroke-width="1.5" />
+      <rect x="18" y="18" width="230" height="34" rx="18" fill="#FFFFFF" fill-opacity="0.10" />
+      <circle cx="222" cy="132" r="16" fill="#FFFFFF" fill-opacity="0.14" />
+      <circle cx="206" cy="132" r="16" fill="#FFFFFF" fill-opacity="0.10" />
+    </g>
+  </svg>
+
+  <div class="hero-copy">
+    <div class="hero-mark">K</div>
     <h1>CrediTrack</h1>
-    <p class="page-sub">Enter your family passcode to continue.</p>
-
-    <div class="field">
-      <label>Family passcode</label>
-      <input
-        type="password"
-        autofocus
-        [ngModel]="passcode()"
-        (ngModelChange)="passcode.set($event)"
-        name="passcode"
-        placeholder="Shared family passcode"
-      />
-    </div>
-
-    <button type="submit" class="btn primary unlock-btn" [disabled]="!passcode().trim()">Unlock</button>
-
-    <p class="hint">
-      This is the <code>FAMILY_ACCESS_KEY</code> set up on the backend server — ask
-      whoever set up the app if you don't have it.
+    <p class="hero-tagline">Family Credit &amp; Expense Tracker</p>
+    <p class="hero-desc">
+      One shared place for every loan, EMI and monthly expense in the
+      family — outstanding balances and payoff dates update themselves from
+      each loan's own EMI schedule, so nobody has to chase numbers by hand.
     </p>
-  </form>
+    <ul class="hero-points">
+      <li><i class="pi pi-chart-line"></i> Automatic EMI schedules &amp; payoff projections</li>
+      <li><i class="pi pi-sitemap"></i> Category-wise spending, all in one dashboard</li>
+      <li><i class="pi pi-shield"></i> Self-hosted — your data stays on your own server</li>
+    </ul>
+  </div>
+
+  <!-- Login / registration prompt — a glass card floating over the
+       background in the right corner, so the illustration and product
+       summary stay the first thing seen, with "how do I get in" answered
+       right next to it. Unlike the app this is mirrored from, sign-up is
+       open here: the tabs let a first-time visitor create their own
+       account instead of only ever offering a single fixed login. -->
+  <div class="unlock-panel">
+    <form class="card unlock-card" (ngSubmit)="submit()">
+      <div class="mark">K</div>
+      <h2>CrediTrack</h2>
+
+      <div class="mode-tabs" role="tablist">
+        <button type="button" role="tab" [class.active]="mode() === 'login'" (click)="switchMode('login')">Sign in</button>
+        <button type="button" role="tab" [class.active]="mode() === 'register'" (click)="switchMode('register')">Create account</button>
+      </div>
+
+      <p class="page-sub">
+        {{ mode() === 'register' ? 'Pick a username and password — this is a public demo, so avoid reusing a real one.' : 'Sign in to continue.' }}
+      </p>
+
+      <div class="field">
+        <label>Username</label>
+        <input
+          type="text"
+          autofocus
+          autocomplete="username"
+          [ngModel]="username()"
+          (ngModelChange)="username.set($event)"
+          name="username"
+          placeholder="Username"
+        />
+      </div>
+
+      <div class="field">
+        <label>Password</label>
+        <input
+          type="password"
+          [autocomplete]="mode() === 'register' ? 'new-password' : 'current-password'"
+          [ngModel]="password()"
+          (ngModelChange)="password.set($event)"
+          name="password"
+          placeholder="Password"
+        />
+      </div>
+
+      @if (mode() === 'register') {
+        <div class="field">
+          <label>Confirm password</label>
+          <input
+            type="password"
+            autocomplete="new-password"
+            [ngModel]="confirmPassword()"
+            (ngModelChange)="confirmPassword.set($event)"
+            name="confirmPassword"
+            placeholder="Confirm password"
+          />
+        </div>
+      }
+
+      @if (error()) {
+        <p class="form-error">{{ error() }}</p>
+      }
+
+      <button
+        type="submit"
+        class="btn primary unlock-btn"
+        [disabled]="!username().trim() || !password() || (mode() === 'register' && !confirmPassword()) || submitting()"
+        [class.loading]="submitting()"
+      >
+        {{ submitting() ? (mode() === 'register' ? 'Creating account…' : 'Signing in…') : (mode() === 'register' ? 'Create account' : 'Sign in') }}
+      </button>
+
+      @if (mode() === 'login') {
+        <p class="hint">
+          New here? Use the "Create account" tab above — this is a public
+          demo, so anyone can sign up with their own username and password.
+        </p>
+      } @else {
+        <p class="hint">
+          Everyone who signs in — however they got their account — sees the
+          same shared demo data. This isn't a private workspace.
+        </p>
+      }
+    </form>
+  </div>
 </div>

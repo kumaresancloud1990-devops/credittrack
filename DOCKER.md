@@ -22,11 +22,19 @@ copy .env.example .env
 ```
 
 Open the new `.env` file and change the four placeholder values — at least
-`FAMILY_ACCESS_KEY` (the passcode everyone types into the app) and ideally
-the three passwords too. This `.env` is separate from `server\.env`, which
-is only used by the older non-Docker workflow; for Docker, this new root
-`.env` is the one that matters, and it's already excluded from git via
-`.gitignore`.
+`FAMILY_ACCESS_KEY` (the initial password for the starter account, username
+`kumaresan`) and ideally the three passwords too. This `.env` is separate
+from `server\.env`, which is only used by the older non-Docker workflow;
+for Docker, this new root `.env` is the one that matters, and it's already
+excluded from git via `.gitignore`.
+
+`FAMILY_ACCESS_KEY` is only used **once** — the first time the backend
+container ever starts against a completely empty database, it creates the
+`kumaresan` account with that value as its password; after that the
+database is what's actually checked, and this line is ignored. See
+"Changing the username or password" below for how to change either one
+after first boot — or just register a brand-new account from the app
+itself, since sign-up is open on this app (see the top-level README.md).
 
 Then build and start everything:
 
@@ -52,8 +60,10 @@ docker compose run --rm seed
   even if you skip it or run it twice; it's a no-op once the `loans` table
   already has rows.
 
-Now open **http://localhost:8081** in a browser. Enter the family passcode
-you set as `FAMILY_ACCESS_KEY` above.
+Now open **http://localhost:8081** in a browser. Sign in with username
+`kumaresan` and the password you set as `FAMILY_ACCESS_KEY` above, or use
+the "Create account" tab to register your own username and password
+instead.
 
 ## 3. Day-to-day
 
@@ -70,7 +80,40 @@ compose down` and `docker compose up -d` again later does **not** lose
 anything. Only `docker compose down -v` (note the `-v`) deletes the volume
 and everything in it — avoid that unless you really mean to start over.
 
-## 4. Ports
+**After pulling in a new migration** (a new file under `server/migrations/`),
+`docker compose up -d --build` alone isn't enough — `migrate` (and `seed`)
+are excluded from a normal `up` on purpose (see `profiles: ['tools']` in
+`docker-compose.yml`), and `docker compose run --rm migrate` only rebuilds
+automatically the very first time it's ever run for this project — after
+that it silently reuses whatever image it built last time, even a stale one
+that predates the new migration file. Force a rebuild explicitly instead:
+
+```
+docker compose run --build --rm migrate
+```
+
+If it prints "No migrations to run!" right after you know a new one was
+added, that's the symptom — re-run with `--build`.
+
+## 4. Changing the username or password
+
+Once signed in, the sidebar's "Change username" / "Change password"
+buttons update your own account directly. From the command line (useful
+for the `kumaresan` starter account, or as a recovery path):
+
+Don't edit `FAMILY_ACCESS_KEY` in `.env` and restart — it's only read once,
+on the very first boot against a completely empty database (see the note
+in step 2). To set a new password after that:
+
+```
+docker compose run --rm backend node scripts/set-password.js kumaresan "your-new-password"
+```
+
+The first argument must be that account's **current** username. Takes
+effect immediately — no restart needed, since every request checks the
+database directly.
+
+## 5. Ports
 
 | Service  | Container port | Host port | What it's for |
 |----------|----------------|-----------|----------------|
@@ -84,7 +127,7 @@ deployment on the same machine without port clashes. Change the left-hand
 side of the `ports:` mapping in `docker-compose.yml` (e.g. `'9090:80'`) if
 you'd rather use different numbers.
 
-## 5. Google Drive sign-in
+## 6. Google Drive sign-in
 
 Document uploads and the "also save to Drive" Excel export need the
 frontend's URL added to **Authorized JavaScript origins** in Google Cloud
@@ -93,7 +136,7 @@ Console (APIs & Services → Credentials → your OAuth client) — add
 from, e.g. a LAN IP). This is the same OAuth client ID already baked into
 `src/environments/environment.prod.ts`; nothing else to configure.
 
-## 6. Backups
+## 7. Backups
 
 Same `pg_dump`/`pg_restore` approach as the README, just run against the
 container instead of a local Postgres install:
@@ -103,7 +146,7 @@ docker compose exec db pg_dump -U credittrack_migrator -d credittrack -n creditt
 docker cp $(docker compose ps -q db):/tmp/credittrack_backup.dump .\credittrack_backup.dump
 ```
 
-## 7. What changed to make this possible
+## 8. What changed to make this possible
 
 Two small, infrastructure-only changes were made to the app itself (no
 loan/EMI calculation logic was touched):

@@ -25,9 +25,12 @@ up` brings up Postgres, the API, and the frontend together.
   Chart.js. Built and served by nginx, which also reverse-proxies `/api` and
   `/healthz` to the backend so both run on one origin (no CORS, no hardcoded
   backend URL baked into the build).
-- **Backend** — Node.js + Express, no build step. A shared-passcode gate
-  protects every `/api/*` route; `/healthz` is open for container/uptime
-  checks.
+- **Backend** — Node.js + Express, no build step. A username + password
+  login gate protects every `/api/*` route (checked fresh against the
+  database on every request — no sessions or tokens); `/healthz` is open
+  for container/uptime checks. Registration is open — anyone can create
+  their own account — but every account reads and writes the same one
+  shared demo dataset; there's no per-account data split.
 - **Database** — PostgreSQL, with a deliberate least-privilege role split:
   a `migrator` role that's the only one allowed to run schema migrations
   (`node-pg-migrate`), and a separate `app` role the running server
@@ -167,9 +170,14 @@ Open `server/.env` in a text editor and set:
   normal case when it's your own computer/server). Set to `true` if you ever
   point this at a Postgres that requires SSL.
 - `FAMILY_ACCESS_KEY` — **change this** to a passphrase of your choosing.
-  This is the shared "family passcode" everyone in the family will type into
-  the app once per browser session — pick something easy to share verbally
-  or over chat, but not guessable by strangers.
+  It's only used **once** — the first time the backend ever starts against a
+  completely empty database: on that first boot it creates a starter
+  account — username `kumaresan`, this value as the password — so there's
+  something to sign in with immediately. From then on the database is what's
+  actually checked, and this line in `.env` is ignored (safe to remove once
+  you've confirmed you can sign in). Since registration is open on this app
+  (see below), this account isn't required reading for anyone else — new
+  visitors can just create their own account instead.
 
 Then, still inside `server/`:
 
@@ -192,7 +200,7 @@ npm start
   tables already have data, this does nothing — safe to run again.
 - `npm start` — starts the API on **http://localhost:4000**, connected as the
   `credittrack_app` role. Leave this running in its own terminal window the whole
-  time you're using the app. `GET /healthz` (no passcode needed) is there if
+  time you're using the app. `GET /healthz` (no login needed) is there if
   you ever want a quick "is it up and can it reach the database" check.
 
 ## 4. Set up the frontend (Angular)
@@ -209,14 +217,34 @@ Then open **http://localhost:4501** in your browser. Make sure the backend
 connect to the backend" message instead of loading.
 
 The first time you open the app (or after clearing your browser tab's
-session data), you'll be asked to **enter the family passcode** — that's the
-`FAMILY_ACCESS_KEY` you set in `server/.env` above. Enter it once; it stays
-remembered for that browser tab's session. Use "Sign out / change passcode"
-at the bottom of the sidebar if you ever need to re-enter it.
+session data), you'll land on a screen with two tabs: **Sign in** and
+**Create account**. Sign in with username `kumaresan` and the password you
+set as `FAMILY_ACCESS_KEY` above, or use "Create account" to register your
+own username and password on the spot — either way, once signed in you're
+looking at the same one shared demo dataset (there's no per-account data
+isolation on this app; see the AUTH NOTE at the top of `server/index.js`).
+Whichever way you got in, it stays remembered for that browser tab's
+session. Use "Sign out" at the bottom of the sidebar if you ever need to
+sign in again.
 
 `npm start` keeps running and auto-reloads the page whenever you (or an
 assistant) change the source code. Press `Ctrl+C` in either terminal to stop
 that piece.
+
+### Changing the username or password
+
+Once signed in, the sidebar's "Change username" / "Change password" buttons
+update your own account directly. From the command line (useful for the
+`kumaresan` starter account, or as a recovery path if you're locked out),
+from `server/`:
+
+```
+npm run set-password -- kumaresan "your-new-password"
+```
+
+The first argument must be that account's **current** username. Takes
+effect immediately — no restart needed, since every request checks the
+database directly.
 
 ## 5. Setting up Google Drive (optional, but recommended)
 
@@ -320,8 +348,11 @@ there, pointed at a real Postgres database via its `.env`.
 - **Postgres now holds all of your data** — loans, closed loans, monthly
   spends, income, and settings — not your browser. The Node API
   (`server/`) is the only thing that talks to the database directly; the
-  Angular app talks to the API over HTTP, authenticated with the shared
-  family passcode (`FAMILY_ACCESS_KEY`).
+  Angular app talks to the API over HTTP, authenticated with each account's
+  username and password (the password stored as a salted hash in the
+  database — see "Changing the username or password" above). Every
+  account — the starter `kumaresan` one or anyone's own registered one —
+  reads and writes this same data; there's no per-account split.
 - The very first time the backend's database is set up, `node db/seed.js`
   (step 3) loads the starting data from `public/data/seed-data.json` — a
   one-time import, not something the app repeats on every load.
@@ -341,15 +372,18 @@ there, pointed at a real Postgres database via its `.env`.
   line (Windows Task Scheduler, or `cron` on Linux/macOS) if you want this to
   happen automatically, e.g. nightly.
 
-## 8. Multiple family members, one shared backend
+## 8. Multiple visitors, one shared backend
 
 Because there's now a real backend server, more than one person can run the
 Angular frontend and see the *same* shared data — as long as their copy of
-the app can reach the machine running the backend over the network.
+the app can reach the machine running the backend over the network. This is
+true regardless of which account each person signs in with (the starter
+`kumaresan` account or their own registered one) — there's no per-account
+data isolation, so everyone pointed at the same backend is looking at the
+same demo dataset.
 
 To do that: on the frontend, set `environment.ts`'s (or `environment.prod.ts`'s)
 `apiBaseUrl` to that machine's address on your home network (its LAN IP,
 e.g. `http://192.168.1.42:4000`) instead of `http://localhost:4000`, then
-rebuild/restart the frontend. Everyone using that frontend build, with the
-same family passcode, will see and edit the same live data. `localhost` only
-works when the backend and the browser are on the very same machine.
+rebuild/restart the frontend. `localhost` only works when the backend and
+the browser are on the very same machine.

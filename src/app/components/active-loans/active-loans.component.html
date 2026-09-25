@@ -48,7 +48,7 @@
 }
 
 @for (group of groups(); track group.category) {
-  <p-card [styleClass]="'group-card cat-accent ' + catSlug(group.category)">
+  <p-card [id]="'cat-' + catSlug(group.category)" [styleClass]="'group-card cat-accent ' + catSlug(group.category)">
     <button type="button" class="cat-toggle" (click)="toggleCategory(group.category)" [attr.aria-expanded]="isCategoryOpen(group.category)">
       <h3>
         <span class="cat-dot-ring"><span class="cat-dot" [class]="catSlug(group.category)"></span></span>

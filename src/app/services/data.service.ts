@@ -391,11 +391,11 @@ export class DataService {
   });
 
   constructor(private http: HttpClient, private auth: AuthService) {
-    // Only start talking to the backend once a family passcode is set —
-    // otherwise every request would just 401. See auth.interceptor.ts.
+    // Only start talking to the backend once logged in — otherwise every
+    // request would just 401. See auth.interceptor.ts.
     effect(() => {
-      const key = this.auth.familyKey();
-      if (key && !this.loadingState && !this._ready()) {
+      const loggedIn = this.auth.username() && this.auth.password();
+      if (loggedIn && !this.loadingState && !this._ready()) {
         this.loadState();
       }
     });
@@ -418,7 +418,7 @@ export class DataService {
         this.loadingState = false;
         console.error('Could not load state from the backend', err);
         if (err.status === 401) {
-          this._syncError.set('The backend rejected that family passcode. Sign out and try again.');
+          this._syncError.set('The backend rejected that username or password. Sign out and try again.');
         } else {
           this._syncError.set(
             `Can't reach the backend server at ${this.apiBase} — make sure it's running (see README.md).`
@@ -429,7 +429,7 @@ export class DataService {
     });
   }
 
-  /** Retries the initial load after a failed connection, without requiring the passcode to change. */
+  /** Retries the initial load after a failed connection, without requiring the credentials to change. */
   retryConnection(): void {
     if (this.loadingState) return;
     this._syncError.set(null);
@@ -441,7 +441,7 @@ export class DataService {
     let message = fallback + ' — check the backend is running.';
     if (err instanceof HttpErrorResponse) {
       if (err.status === 401) {
-        message = 'The backend rejected the family passcode for this request.';
+        message = 'The backend rejected the username or password for this request.';
       } else if (err.error?.message) {
         message = err.error.message;
       }

@@ -1,4 +1,4 @@
-@if (!auth.familyKey()) {
+@if (!auth.username() || !auth.password()) {
   <app-unlock></app-unlock>
 } @else if (!data.ready()) {
   <div class="connecting-shell">
@@ -6,7 +6,7 @@
       @if (data.syncError()) {
         <h2>Can't connect to the backend</h2>
         <p class="page-sub">{{ data.syncError() }}</p>
-        <button class="btn primary" (click)="auth.signOut()">Sign out / change passcode</button>
+        <button class="btn primary" (click)="auth.signOut()">Sign out</button>
       } @else {
         <h2>Loading…</h2>
         <p class="page-sub">Connecting to the backend server.</p>

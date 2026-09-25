@@ -1,5 +1,6 @@
-import { Component, ViewChild, computed, signal } from '@angular/core';
+import { Component, ViewChild, afterNextRender, computed, signal } from '@angular/core';
 
+import { ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
@@ -100,7 +101,32 @@ export class ActiveLoansComponent {
   @ViewChild('actionsMenu') actionsMenuRef?: Menu;
   readonly activeMenuItems = signal<MenuItem[]>([]);
 
-  constructor(public data: DataService) {}
+  constructor(public data: DataService, route: ActivatedRoute) {
+    // Lets the Dashboard's tiles deep-link straight into the relevant part
+    // of this page — e.g. clicking "Family credit funds" opens exactly that
+    // category (and nothing else), while "EMI due / month" / "Pending
+    // EMIs" open every category since EMI-bearing loans can be in any of
+    // them. Query params only: a category typed in from elsewhere that
+    // doesn't match a real category, or a plain visit to /active-loans with
+    // no params, leaves the normal default (App Loans + Individual Loans
+    // open) untouched.
+    const params = route.snapshot.queryParamMap;
+    const categoryParam = params.get('category') as LoanCategory | null;
+    const focus = params.get('focus');
+    let scrollTargetId: string | null = null;
+    if (categoryParam && (LOAN_CATEGORIES as readonly string[]).includes(categoryParam)) {
+      this.expandedCategories.set(new Set([categoryParam]));
+      scrollTargetId = 'cat-' + categorySlug(categoryParam);
+    } else if (focus === 'emi') {
+      this.expandedCategories.set(new Set(LOAN_CATEGORIES));
+    }
+    if (scrollTargetId) {
+      const id = scrollTargetId;
+      afterNextRender(() => {
+        document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
+  }
 
   readonly groups = computed<CategoryGroup[]>(() => {
     const loans = this.data.sortedLoans();

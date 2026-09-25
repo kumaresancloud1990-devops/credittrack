@@ -42,6 +42,88 @@
     }
 
     <div class="db-section">
+      <div class="db-label">Username</div>
+      @if (!changeUsernameOpen()) {
+        <div class="account-current-username" [title]="auth.username() || ''">
+          <i class="pi pi-user"></i>{{ auth.username() }}
+        </div>
+        <button
+          pButton
+          type="button"
+          size="small"
+          [outlined]="true"
+          class="db-btn"
+          (click)="openChangeUsername()"
+          icon="pi pi-pencil"
+          label="Change username"
+        ></button>
+      } @else {
+        <form class="change-passcode-form" (ngSubmit)="submitChangeUsername()">
+          <input
+            pInputText
+            type="text"
+            autocomplete="username"
+            placeholder="New username"
+            [ngModel]="newUsername()"
+            (ngModelChange)="newUsername.set($event)"
+            name="newUsername"
+          />
+          <div class="cp-actions">
+            <button pButton type="submit" size="small" [loading]="changingUsername()" label="Save"></button>
+            <button pButton type="button" size="small" [text]="true" (click)="cancelChangeUsername()" label="Cancel"></button>
+          </div>
+        </form>
+      }
+      @if (changeUsernameMessage()) {
+        <div class="foot-note" [class.error]="changeUsernameMessageIsError()">{{ changeUsernameMessage() }}</div>
+      }
+    </div>
+
+    <div class="db-section">
+      <div class="db-label">Password</div>
+      @if (!changePasswordOpen()) {
+        <button
+          pButton
+          type="button"
+          size="small"
+          [outlined]="true"
+          class="db-btn"
+          (click)="openChangePassword()"
+          icon="pi pi-key"
+          label="Change password"
+        ></button>
+      } @else {
+        <form class="change-passcode-form" (ngSubmit)="submitChangePassword()">
+          <input
+            pInputText
+            type="password"
+            autocomplete="new-password"
+            placeholder="New password"
+            [ngModel]="newPassword()"
+            (ngModelChange)="newPassword.set($event)"
+            name="newPassword"
+          />
+          <input
+            pInputText
+            type="password"
+            autocomplete="new-password"
+            placeholder="Confirm new password"
+            [ngModel]="confirmPassword()"
+            (ngModelChange)="confirmPassword.set($event)"
+            name="confirmPassword"
+          />
+          <div class="cp-actions">
+            <button pButton type="submit" size="small" [loading]="changingPassword()" label="Save"></button>
+            <button pButton type="button" size="small" [text]="true" (click)="cancelChangePassword()" label="Cancel"></button>
+          </div>
+        </form>
+      }
+      @if (changePasswordMessage()) {
+        <div class="foot-note" [class.error]="changePasswordMessageIsError()">{{ changePasswordMessage() }}</div>
+      }
+    </div>
+
+    <div class="db-section">
       <div class="db-label">Database</div>
       <div class="db-actions">
         <button
@@ -76,7 +158,7 @@
       }
     </div>
 
-    <button type="button" class="signout-link" (click)="signOut()">Sign out / change passcode</button>
+    <button type="button" class="signout-link" (click)="signOut()">Sign out</button>
   </div>
 </aside>
 
